@@ -1,0 +1,23 @@
+﻿<Window x:Class="LocalsJsonDumper.ExportDialog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:LocalsJsonDumper"
+             mc:Ignorable="d"
+             d:DesignHeight="350" Width="480"
+            Height="380"
+             ResizeMode="NoResize"
+            Title="Dump variable from locals as JSON">
+
+    <Grid Width="auto" Height="auto" Margin="10,10,0,0" >
+        <ComboBox  HorizontalAlignment="Left" Height="23" Margin="10,10,0,0" VerticalAlignment="Top" Width="250" Name="LocalDropDown" SelectionChanged="LocalDropDown_SelectionChanged" />
+        <Button Content="Copy to clipboard" Name="CopyButton" Height="23" HorizontalAlignment="Left" Margin="270,10,0,0" VerticalAlignment="top" Width="114" Click="CopyToClipBoardButtonClick"/>
+        <TextBlock HorizontalAlignment="Left" Margin="12,36,0,0" TextWrapping="NoWrap" Text="" VerticalAlignment="Top"  Name="TypeInfo" />
+        <TextBox  ScrollViewer.VerticalScrollBarVisibility="Auto" HorizontalAlignment="Stretch" Height="auto" Margin="10,58,10,35" TextWrapping="Wrap"
+                  Text="" VerticalAlignment="Stretch" Width="auto" Name="OutPut" MinWidth="400" MinLines="20"  />
+        <Button  Content="Close" HorizontalAlignment="Right" Margin="0,0,10.333,9.667" VerticalAlignment="Bottom" Width="75" Click="Button_Click" />
+        
+        
+    </Grid>
+</Window>
