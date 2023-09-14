@@ -32,6 +32,8 @@ namespace LocalsJsonDumper
         /// </summary>
         private readonly AsyncPackage package;
 
+        private readonly DTE dte;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="DumpObjectCommand"/> class.
         /// Adds our command handlers for menu (commands must exist in the command table file)
@@ -44,13 +46,15 @@ namespace LocalsJsonDumper
             commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
 
             var menuCommandID = new CommandID(CommandSet, CommandId);
-            var menuItem = new MenuCommand(this.Execute, menuCommandID);
+            var menuItem = new MenuCommand(Execute, menuCommandID);
             commandService.AddCommand(menuItem);
 
             var menuCommandIDc = new CommandID(CommandSet, ContextMenuCommandId);
-            var menuItemc = new MenuCommand(this.ContextMenuExecute, menuCommandIDc);
+            var menuItemc = new MenuCommand(ContextMenuExecute, menuCommandIDc);
 
             commandService.AddCommand(menuItemc);
+
+            dte = GetDTE();
         }
 
         /// <summary>
@@ -69,7 +73,7 @@ namespace LocalsJsonDumper
         {
             get
             {
-                return this.package;
+                return package;
             }
         }
 
@@ -93,11 +97,46 @@ namespace LocalsJsonDumper
         /// OleMenuCommandService service and MenuCommand class.
         /// </summary>
         /// <param name="sender">Event sender.</param>
-        /// <param name="e">Event args.</param>
+        /// <param name="e">Event args.</param>      
         private void Execute(object sender, EventArgs e)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            DTE dte = GetDTE();
+            if (!CorrectStateToExecute())
+            {
+                return;
+            }
+
+            LaunchDialog();
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "Done in CorrectStateToExecute")]
+        private void ContextMenuExecute(object sender, EventArgs e)
+        {
+            if (!CorrectStateToExecute())
+            {
+                return;
+            }
+            Document doc = dte.ActiveDocument;
+
+            TextDocument txt = doc.Object() as TextDocument;
+
+            var selection = txt.Selection;
+            var possibleLocalName = selection.Text;
+            if (selection.IsEmpty)
+            {
+                var leftPoint = selection.AnchorPoint.CreateEditPoint();
+                leftPoint.WordLeft(1);
+                var rightPoint = selection.ActivePoint.CreateEditPoint();
+                rightPoint.WordRight(1);
+                var madeSelectionText = leftPoint.GetText(rightPoint);
+                possibleLocalName = madeSelectionText.Trim();
+            }
+
+            LaunchDialog(possibleLocalName);
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "Done in CorrectStateToExecute")]
+        private void LaunchDialog(string selectedLocal = "")
+        {
             var debugger = dte.Debugger;
             if (debugger.CurrentStackFrame is null)
             {
@@ -111,50 +150,21 @@ namespace LocalsJsonDumper
             {
                 localList.Add(item);
             }
-            var dialog = new ExportDialog(localList);
-            dialog.ShowDialog();
+
+            new ExportDialog(localList, selectedLocal).ShowDialog();
         }
 
-        private void ContextMenuExecute(object sender, EventArgs e)
+        private bool CorrectStateToExecute()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            DTE dte = GetDTE();
-            Document doc = dte.ActiveDocument;
-
-            TextDocument txt = doc.Object() as TextDocument;
-
-            var selection = txt.Selection;
-            var text = selection.Text;
-            if (selection.IsEmpty)
-            {
-                var leftPoint = selection.AnchorPoint.CreateEditPoint();
-                leftPoint.WordLeft(1);
-                var rightPoint = selection.ActivePoint.CreateEditPoint();
-                rightPoint.WordRight(1);
-                var madeSelectionText = leftPoint.GetText(rightPoint);
-                text = madeSelectionText.Trim();
-            }
-
             var debugger = dte.Debugger;
             if (debugger.CurrentStackFrame is null)
             {
                 System.Windows.Forms.MessageBox.Show($"CurrentStackFrame is not available.");
-                return;
-            }
-            var locals = debugger.CurrentStackFrame.Locals;
-
-            foreach (Expression item in locals)
-            {
-                if (item.Name == text)
-                {
-                    var jsongenerator = new JsonGenerator();
-                    var json = jsongenerator.GenerateJson(item);
-                    System.Windows.Clipboard.SetText(json);
-                    return;
-                }
+                return false;
             }
 
-            System.Windows.Forms.MessageBox.Show($"Could not found a local matching current selection.{Environment.NewLine}'{text}'");
+            return true;
         }
 
         private DTE GetDTE()

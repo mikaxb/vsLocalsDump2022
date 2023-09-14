@@ -13,16 +13,15 @@ namespace LocalsJsonDumper
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "Done in constructor.")]
     public partial class ExportDialog : Window
     {
-        public ExportDialog(List<EnvDTE.Expression> locals)
+        public ExportDialog(List<EnvDTE.Expression> locals, string selectedLocal = "")
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
             InitializeComponent();
             Locals = locals;
-            PopulateDropDown(locals);
+            PopulateDropDown(selectedLocal);
         }
 
         private List<EnvDTE.Expression> Locals { get; set; }
-
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             Close();
@@ -44,7 +43,7 @@ namespace LocalsJsonDumper
             catch (Exception ex)
             {
                 TypeInfo.Text = $"Exception of type {ex.GetType()} occured";
-                OutPut.Text = ex.ToString();
+                OutPut.Text = ex.Message;
             }
         }
 
@@ -64,23 +63,24 @@ namespace LocalsJsonDumper
                   catch (Exception ex)
                   {
                       TypeInfo.Text = $"Exception of type {ex.GetType()} occured";
-                      OutPut.Text = ex.ToString();
+                      OutPut.Text = ex.Message;
                   }
               });
         }
 
 
-        private void PopulateDropDown(List<EnvDTE.Expression> locals)
+        private void PopulateDropDown(string preSelectedValue)
         {
             try
             {
                 Dispatcher.VerifyAccess();
-                locals.ForEach(i => LocalDropDown.Items.Add(i.Name));
+                Locals.ForEach(i => LocalDropDown.Items.Add(i.Name));
+                LocalDropDown.SelectedValue = preSelectedValue;
             }
             catch (Exception ex)
             {
                 TypeInfo.Text = $"Exception of type {ex.GetType()} occured";
-                OutPut.Text = ex.ToString();
+                OutPut.Text = ex.Message;
             }
         }
 
