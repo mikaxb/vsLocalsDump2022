@@ -22,6 +22,8 @@ namespace LocalsJsonDumper
         }
 
         private List<EnvDTE.Expression> Locals { get; set; }
+
+        private EnvDTE.Expression SelectedLocal { get; set; }
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             Close();
@@ -31,14 +33,10 @@ namespace LocalsJsonDumper
         {
             try
             {
-                OutPut.Text = "...GENERATING...";
-                OutPut.TextAlignment = TextAlignment.Center;
                 var dropDown = sender as ComboBox;
-                var selectedLocal = Locals.FirstOrDefault(i => i.Name == dropDown.SelectedValue.ToString());
+                SelectedLocal = Locals.FirstOrDefault(i => i.Name == dropDown.SelectedValue.ToString());
                 dropDown.IsDropDownOpen = false;
-                TypeInfo.Text = selectedLocal.Type.ToString();
-                CopyButton.IsEnabled = false;
-                GenerateInTask(selectedLocal);
+                TypeInfo.Text = SelectedLocal.Type.ToString();
             }
             catch (Exception ex)
             {
@@ -47,7 +45,7 @@ namespace LocalsJsonDumper
             }
         }
 
-        private void GenerateInTask(EnvDTE.Expression experssion)
+        private void GenerateInTask(EnvDTE.Expression expression, TimeSpan timeout, uint maxDepth)
         {
             _ = Task.Run(async () =>
               {
@@ -55,10 +53,11 @@ namespace LocalsJsonDumper
                   {
                       await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                       var generator = new JsonGenerator();
-                      var json = generator.GenerateJson(experssion);
+                      var json = generator.GenerateJson(expression, timeout, maxDepth);
                       OutPut.Text = json;
                       OutPut.TextAlignment = TextAlignment.Left;
                       CopyButton.IsEnabled = true;
+                      GenerateButton.IsEnabled = true;
                   }
                   catch (Exception ex)
                   {
@@ -82,6 +81,37 @@ namespace LocalsJsonDumper
                 TypeInfo.Text = $"Exception of type {ex.GetType()} occured";
                 OutPut.Text = ex.Message;
             }
+        }
+
+        private void GenerateButtonClick(object sender, RoutedEventArgs e)
+        {
+            OutPut.Text = "<<...GENERATING...>>";
+            OutPut.TextAlignment = TextAlignment.Center;
+            CopyButton.IsEnabled = false;
+            GenerateButton.IsEnabled = false;
+
+            if(ValidateAndParseInput(MaxDepthInput.Text, out var maxDepth) && ValidateAndParseInput(TimeoutInput.Text, out var timeout))
+            {
+                GenerateInTask(SelectedLocal, TimeSpan.FromSeconds(timeout), maxDepth);
+            }
+            else
+            {
+                CopyButton.IsEnabled = true;
+                GenerateButton.IsEnabled = true;
+                OutPut.Text = "<Invalid input. Use unsigned integers.>";
+                OutPut.TextAlignment = TextAlignment.Center;
+            }          
+        }
+
+        private bool ValidateAndParseInput(string input, out uint result)
+        {
+            if (uint.TryParse(input, out uint parsed))
+            {
+                result = parsed;
+                return true;
+            }
+            result = default;            
+            return false;
         }
 
         private void CopyToClipBoardButtonClick(object sender, RoutedEventArgs e)

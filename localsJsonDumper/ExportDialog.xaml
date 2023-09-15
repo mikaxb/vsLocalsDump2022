@@ -4,20 +4,29 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:LocalsJsonDumper"
-             mc:Ignorable="d"
-             d:DesignHeight="350" Width="480"
-            Height="380"
-             ResizeMode="NoResize"
+             mc:Ignorable="d" Width="480"
+            Height="391"
+             ResizeMode="CanResizeWithGrip"
             Title="Dump variable from locals as JSON">
 
     <Grid Width="auto" Height="auto" Margin="10,10,0,0" >
         <ComboBox  HorizontalAlignment="Left" Height="23" Margin="10,10,0,0" VerticalAlignment="Top" Width="250" Name="LocalDropDown" SelectionChanged="LocalDropDown_SelectionChanged" />
-        <Button Content="Copy to clipboard" Name="CopyButton" Height="23" HorizontalAlignment="Left" Margin="270,10,0,0" VerticalAlignment="top" Width="114" Click="CopyToClipBoardButtonClick"/>
-        <TextBlock HorizontalAlignment="Left" Margin="12,36,0,0" TextWrapping="NoWrap" Text="" VerticalAlignment="Top"  Name="TypeInfo" />
-        <TextBox  ScrollViewer.VerticalScrollBarVisibility="Auto" HorizontalAlignment="Stretch" Height="auto" Margin="10,58,10,35" TextWrapping="Wrap"
-                  Text="" VerticalAlignment="Stretch" Width="auto" Name="OutPut" MinWidth="400" MinLines="20"  />
+
+        <TextBlock HorizontalAlignment="Left" Margin="265,13,0,0" TextWrapping="Wrap" Text="Unknown type" VerticalAlignment="Top"  Name="TypeInfo"/>
+
+        <TextBlock HorizontalAlignment="Left" Margin="10,38,0,0" TextWrapping="NoWrap" Text="Max depth:" VerticalAlignment="Top" />
+        <TextBox HorizontalAlignment="Left" Margin="75,38,0,0" TextWrapping="NoWrap" Text="7" VerticalAlignment="Top" Width="30" Name="MaxDepthInput" TextAlignment="Right"/>
+
+        <TextBlock HorizontalAlignment="Left" Margin="150,38,0,0" TextWrapping="NoWrap" Text="Timeout (s):" VerticalAlignment="Top" />
+        <TextBox HorizontalAlignment="Left" Margin="217,38,0,0" TextWrapping="NoWrap" Text="7" VerticalAlignment="Top" Width="30" Name="TimeoutInput" TextAlignment="Right"/>
+
+        <TextBox  ScrollViewer.VerticalScrollBarVisibility="Auto" Height="auto" Margin="10,75,10,35" TextWrapping="Wrap"
+                  Text="" Width="auto" Name="OutPut" MinWidth="400" MinLines="20"  />
+        <Button Content="Generate" Name="GenerateButton" Height="23" HorizontalAlignment="Left" Margin="10,0,0,7" VerticalAlignment="Bottom" Width="85" Click="GenerateButtonClick"/>
+        <Button Content="Copy to clipboard" Name="CopyButton" Height="23" HorizontalAlignment="Left" Margin="100,0,0,7" VerticalAlignment="Bottom" Width="114" Click="CopyToClipBoardButtonClick"/>
         <Button  Content="Close" HorizontalAlignment="Right" Margin="0,0,10.333,9.667" VerticalAlignment="Bottom" Width="75" Click="Button_Click" />
-        
-        
+
+
+
     </Grid>
 </Window>
