@@ -99,7 +99,7 @@ namespace LocalsJsonDumper
 
         private bool ExpressionIsEnum(Expression exp)
         {
-            foreach (Expression subExpression in exp.DataMembers)
+            if (exp.DataMembers.Count > 0)
             {
                 return false;
             }
@@ -114,29 +114,40 @@ namespace LocalsJsonDumper
             return true;
         }
 
-
         private string GenerateJsonRecurse(Expression currentExpression, uint currentDepth)
         {
             if (currentExpression == null)
             {
-                return $"<Could not evaluate Expression>";
+                return $"< Could not evaluate Expression. Check that a know type is selected. >";
             }
 
             Debug.WriteLine($"Depth: {currentDepth}. {currentExpression.Type}:{currentExpression.Value}");
 
             if (OperationTimeoutToken.IsCancellationRequested)
             {
-                return $"<TIMEOUT ERROR>";
+                Debug.WriteLine($"< Timeout occured >");
+                return $"< Timeout occured >";
             }
 
-            if (currentDepth >= MaxRecurseDepth)
-            {
-                return string.Empty;
-            }
+            /* if (currentDepth >= MaxRecurseDepth)
+             {
+                 return string.Empty;
+             }*/
 
-            if (ExpressionIsDictionary(currentExpression))
+            if (ExpressionIsValue(currentExpression))
             {
-                //var values = new StringBuilder();
+                return $"{GetJsonRepresentationofValue(currentExpression)}";
+            }
+            else if (ExpressionIsEnum(currentExpression))
+            {
+                return $"\"{currentExpression.Value}\"";
+            }
+            else if (currentDepth >= MaxRecurseDepth)
+            {
+                return $"\"{currentExpression.Value}\"";
+            }
+            else if (ExpressionIsDictionary(currentExpression))
+            {
                 var values = new List<string>();
                 foreach (Expression dicSubExpression in currentExpression.DataMembers)
                 {
@@ -162,22 +173,10 @@ namespace LocalsJsonDumper
                         }
                     }
                 }
-
-                //return $"{{{values.ToString().TrimEnd(',')}}}";
-                return $"{{{string.Join($",{Environment.NewLine}", values.ToArray())}}}";
-            }
-
-            if (ExpressionIsValue(currentExpression))
-            {
-                return $"{GetJsonRepresentationofValue(currentExpression)}";
-            }
-            else if (ExpressionIsEnum(currentExpression))
-            {
-                return $"\"{currentExpression.Value}\"";
+                return $"{{{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}}}";
             }
             else if (ExpressionIsListOrArray(currentExpression))
             {
-                //var values = new StringBuilder();
                 var values = new List<string>();
                 foreach (Expression ex in currentExpression.DataMembers)
                 {
@@ -186,44 +185,36 @@ namespace LocalsJsonDumper
                         values.Add(GenerateJsonRecurse(ex, currentDepth + 1));
                     }
                 }
-
-                //return $"[{values.ToString().TrimEnd(',')}]";
-                return $"[{string.Join($",{Environment.NewLine}" , values.ToArray())}]";
+                return $"[{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}]";
             }
             else
             {
-                var values = new StringBuilder();
+                var values = new List<string>();
                 foreach (Expression subExpression in currentExpression.DataMembers)
                 {
                     if (subExpression.Value == "null")
                     {
-                        values.Append($"\"{subExpression.Name}\":null");
-                    }
-                    else if (ExpressionIsValue(subExpression) || ExpressionIsListOrArray(subExpression))
-                    {
-                        values.Append($"\"{subExpression.Name}\":{GenerateJsonRecurse(subExpression, currentDepth + 1)}");
+                        values.Add($"\"{subExpression.Name}\":null");
                     }
                     else
                     {
-                        values.Append($"\"{subExpression.Name}\":{GenerateJsonRecurse(subExpression, currentDepth + 1)}");
+                        values.Add($"\"{subExpression.Name}\":{GenerateJsonRecurse(subExpression, currentDepth + 1)}");
                     }
-                    values.Append(",");
                 }
-
-                return $"{{{values.ToString().TrimEnd(',')}}}";
+                return $"{{{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}}}";
             }
-        }
-
-        private string GenreateLine(string content, uint depth)
-        {
-            return $"{GenerateIndentation(depth)}{content}{Environment.NewLine}";
         }
 
         private string GenerateIndentation(uint depth)
         {
+            if (depth == uint.MaxValue)
+            {
+                depth = uint.MinValue;
+            }
+
             var indentation = new StringBuilder();
 
-            for (int i = 0; i <= depth; i++)
+            for (int i = 0; i < depth; i++)
             {
                 indentation.Append("\t");
             }
@@ -238,11 +229,6 @@ namespace LocalsJsonDumper
                 case "System.DateTime":
                 case "System.TimeSpan":
                 case "System.DateTimeOffset":
-                    foreach (Expression ex in exp.DataMembers)
-                    {
-                        Debug.WriteLine($"Time: {ex.Name}. {ex.Type}:{ex.Value}");
-                    }
-                  
                     return $"\"{exp.Value.Replace("{", "").Replace("}", "")}\"";
 
                 case "string":

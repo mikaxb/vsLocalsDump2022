@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -85,7 +86,7 @@ namespace LocalsJsonDumper
 
         private void GenerateButtonClick(object sender, RoutedEventArgs e)
         {
-            OutPut.Text = "<<...GENERATING...>>";
+            OutPut.Text = "<< GENERATING >>";
             OutPut.TextAlignment = TextAlignment.Center;
             CopyButton.IsEnabled = false;
             GenerateButton.IsEnabled = false;
@@ -98,7 +99,7 @@ namespace LocalsJsonDumper
             {
                 CopyButton.IsEnabled = true;
                 GenerateButton.IsEnabled = true;
-                OutPut.Text = "<Invalid input. Use unsigned integers.>";
+                OutPut.Text = "< Invalid input. Use unsigned integers. >";
                 OutPut.TextAlignment = TextAlignment.Center;
             }          
         }
