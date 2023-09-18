@@ -1,11 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using EnvDTE;
 
 namespace LocalsJsonDumper
-{
+{  
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "Done in constructor.")]
     internal class JsonGenerator
     {
@@ -14,25 +16,35 @@ namespace LocalsJsonDumper
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
         }
 
-        public int TimeOutInSeconds { get; } = 10;
         private Regex PartOfCollection { get; } = new Regex(@"\[\d+\]");
-        private Stopwatch RuntimeTimer { get; } = new Stopwatch();
 
-        public string GenerateJson(Expression expression)
+        private CancellationTokenSource CancellationTokenSource { get; set; }
+
+        private CancellationToken OperationTimeoutToken { get; set; }
+
+        private uint MaxRecurseDepth { get; set; }
+
+        public string GenerateJson(Expression expression, TimeSpan timeout, uint maxDepth)
         {
             try
             {
-                RuntimeTimer.Start();
-                var result = GenerateJsonRecurse(expression);
-                RuntimeTimer.Stop();
-                RuntimeTimer.Reset();
+                CancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource.CancelAfter(timeout);
+                OperationTimeoutToken = CancellationTokenSource.Token;
+                MaxRecurseDepth = maxDepth;
+                var result = GenerateJsonRecurse(expression, 0);
                 return result;
             }
             catch (Exception ex)
             {
-                System.Windows.Forms.MessageBox.Show($"Could not generate JSON due to {ex.GetType().Name}: {ex.Message}.{Environment.NewLine}Sorry, this extension cannot handle everything.{Environment.NewLine}Try a smaller, less complex object.");
+                System.Windows.Forms.MessageBox.Show($"Could not generate JSON due to {ex.GetType().Name}: {ex.Message}.");
             }
             return string.Empty;
+        }
+
+        public void StopGeneration()
+        {
+            CancellationTokenSource.Cancel();
         }
 
         private bool ExpressionIsDictionary(Expression exp)
@@ -63,6 +75,8 @@ namespace LocalsJsonDumper
             {
                 case "string":
                 case "System.DateTime":
+                case "System.TimeSpan":
+                case "System.DateTimeOffset":
                 case "int":
                 case "uint":
                 case "char":
@@ -83,16 +97,53 @@ namespace LocalsJsonDumper
             }
         }
 
-      
-        private string GenerateJsonRecurse(Expression currentExpression)
-        {          
-            if (RuntimeTimer.ElapsedMilliseconds > (TimeOutInSeconds * 1000))
+        private bool ExpressionIsEnum(Expression exp)
+        {
+            if (exp.DataMembers.Count > 0)
             {
-                throw new TimeoutException("Timeout while generating JSON.");
+                return false;
             }
-            if (ExpressionIsDictionary(currentExpression))
+            if (exp.Value.Contains("{"))
             {
-                var values = new StringBuilder();
+                return false;
+            }
+            if (exp.Value.Contains("}"))
+            {
+                return false;
+            }
+            return true;
+        }
+
+        private string GenerateJsonRecurse(Expression currentExpression, uint currentDepth)
+        {
+            if (currentExpression == null)
+            {
+                return $"< Could not evaluate Expression. Check that a known type is selected. >";
+            }
+
+            Debug.WriteLine($"Depth: {currentDepth}. {currentExpression.Type}:{currentExpression.Value}");
+
+            if (OperationTimeoutToken.IsCancellationRequested)
+            {
+                Debug.WriteLine($"< Timeout occured >");
+                return $"<Timeout occured>";
+            }
+
+            if (ExpressionIsValue(currentExpression))
+            {
+                return $"{GetJsonRepresentationofValue(currentExpression)}";
+            }
+            else if (ExpressionIsEnum(currentExpression))
+            {
+                return $"\"{currentExpression.Value}\"";
+            }
+            else if (currentDepth >= MaxRecurseDepth)
+            {
+                return $"\"{currentExpression.Value}\"";
+            }
+            else if (ExpressionIsDictionary(currentExpression))
+            {
+                var values = new List<string>();
                 foreach (Expression dicSubExpression in currentExpression.DataMembers)
                 {
                     if (PartOfCollection.IsMatch(dicSubExpression.Name))
@@ -101,58 +152,69 @@ namespace LocalsJsonDumper
                         string value = null;
                         foreach (Expression dicCollectionExpression in dicSubExpression.DataMembers)
                         {
-                            if (dicCollectionExpression.Name == "key")
+                            if (dicCollectionExpression.Name == "Key")
                             {
-                                key = GenerateJsonRecurse(dicCollectionExpression);
+                                key = dicCollectionExpression.Value.Replace("{", "").Replace("}", "");
                             }
-                            if (dicCollectionExpression.Name == "value")
+                            if (dicCollectionExpression.Name == "Value")
                             {
-                                value = GenerateJsonRecurse(dicCollectionExpression);
+                                value = GenerateJsonRecurse(dicCollectionExpression, currentDepth + 1);
                             }
                         }
-                        values.Append($"\"{key.Trim('"')}\":{value},");
+
+                        if (!string.IsNullOrEmpty(key))
+                        {
+                            values.Add($"\"{key.Trim('"')}\":{value}");
+                        }
                     }
                 }
-                return $"{{{values.ToString().TrimEnd(',')}}}";
-            }
-
-            if (ExpressionIsValue(currentExpression))
-            {
-                return $"{GetJsonRepresentationofValue(currentExpression)}";
+                return $"{{{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}}}";
             }
             else if (ExpressionIsListOrArray(currentExpression))
             {
-                var values = new StringBuilder();
+                var values = new List<string>();
                 foreach (Expression ex in currentExpression.DataMembers)
                 {
                     if (PartOfCollection.IsMatch(ex.Name))
                     {
-                        values.Append(GenerateJsonRecurse(ex) + ",");
+                        values.Add(GenerateJsonRecurse(ex, currentDepth + 1));
                     }
                 }
-                return $"[{values.ToString().TrimEnd(',')}]";
+                return $"[{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}]";
             }
             else
             {
-                var values = new StringBuilder();
+                var values = new List<string>();
                 foreach (Expression subExpression in currentExpression.DataMembers)
                 {
                     if (subExpression.Value == "null")
                     {
-                        values.Append($"\"{subExpression.Name}\":null");
-                    }
-                    else if (ExpressionIsValue(subExpression) || ExpressionIsListOrArray(subExpression))
-                    {
-                        values.Append($"\"{subExpression.Name}\":{GenerateJsonRecurse(subExpression)}");
+                        values.Add($"\"{subExpression.Name}\":null");
                     }
                     else
                     {
-                        values.Append($"\"{subExpression.Name}\":{GenerateJsonRecurse(subExpression)}");
+                        values.Add($"\"{subExpression.Name}\":{GenerateJsonRecurse(subExpression, currentDepth + 1)}");
                     }
-                    values.Append(",");
                 }
-                return $"{{{values.ToString().TrimEnd(',')}}}";
+                return $"{{{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}}}";
             }
+        }
+
+        private string GenerateIndentation(uint depth)
+        {
+            if (depth == uint.MaxValue)
+            {
+                depth = uint.MinValue;
+            }
+
+            var indentation = new StringBuilder();
+
+            for (int i = 0; i < depth; i++)
+            {
+                indentation.Append("\t");
+            }
+
+            return indentation.ToString();
         }
 
         private string GetJsonRepresentationofValue(Expression exp)
@@ -160,22 +222,30 @@ namespace LocalsJsonDumper
             switch (exp.Type.Trim('?'))
             {
                 case "System.DateTime":
+                case "System.TimeSpan":
+                case "System.DateTimeOffset":
                     return $"\"{exp.Value.Replace("{", "").Replace("}", "")}\"";
 
-                case "int":
                 case "string":
+                case "int":
+                case "uint":
                 case "bool":
                 case "double":
                 case "float":
                 case "decimal":
                 case "long":
+                case "ulong":
+                case "byte":
+                case "sbyte":
+                case "short":
+                case "ushort":
                     return exp.Value;
 
                 case "char":
                     return $"\"{exp.Value.Substring(exp.Value.IndexOf("'") + 1, 1)}\"";
 
                 default:
-                    return string.Empty;
+                    return $" <UNHANDLED TYPE: {exp.Type}>";
             }
         }
     }
