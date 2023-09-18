@@ -42,7 +42,7 @@ namespace LocalsJsonDumper
             catch (Exception ex)
             {
                 TypeInfo.Text = $"Exception of type {ex.GetType()} occured";
-                OutPut.Text = ex.Message;
+                OutPut.Text = $"Exception of type {ex.GetType()} occured{Environment.NewLine}{ex.Message}";
             }
         }
 
@@ -63,7 +63,7 @@ namespace LocalsJsonDumper
                   catch (Exception ex)
                   {
                       TypeInfo.Text = $"Exception of type {ex.GetType()} occured";
-                      OutPut.Text = ex.Message;
+                      OutPut.Text = $"Exception of type {ex.GetType()} occured{Environment.NewLine}{ex.Message}";
                   }
               });
         }
@@ -80,7 +80,7 @@ namespace LocalsJsonDumper
             catch (Exception ex)
             {
                 TypeInfo.Text = $"Exception of type {ex.GetType()} occured";
-                OutPut.Text = ex.Message;
+                OutPut.Text = $"Exception of type {ex.GetType()} occured{Environment.NewLine}{ex.Message}";
             }
         }
 

@@ -7,7 +7,7 @@ using System.Threading;
 using EnvDTE;
 
 namespace LocalsJsonDumper
-{
+{  
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "Done in constructor.")]
     internal class JsonGenerator
     {
@@ -118,7 +118,7 @@ namespace LocalsJsonDumper
         {
             if (currentExpression == null)
             {
-                return $"< Could not evaluate Expression. Check that a know type is selected. >";
+                return $"< Could not evaluate Expression. Check that a known type is selected. >";
             }
 
             Debug.WriteLine($"Depth: {currentDepth}. {currentExpression.Type}:{currentExpression.Value}");
@@ -126,13 +126,8 @@ namespace LocalsJsonDumper
             if (OperationTimeoutToken.IsCancellationRequested)
             {
                 Debug.WriteLine($"< Timeout occured >");
-                return $"< Timeout occured >";
+                return $"<Timeout occured>";
             }
-
-            /* if (currentDepth >= MaxRecurseDepth)
-             {
-                 return string.Empty;
-             }*/
 
             if (ExpressionIsValue(currentExpression))
             {
