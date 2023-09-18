@@ -6,7 +6,7 @@ Since it is using data from the debugger and not the objects themselves the outp
 It adds menu options in the right click context menu for the code editor and the same option in the Tools menu.
 
 The following output:
-
+```
 {
 	"DateTimeOffsetProperty":"2023-09-18 15:52:41 +02:00",
 	"DateTimeProperty":"2023-09-18 10:52:41",
@@ -87,10 +87,10 @@ The following output:
 	"_intField":3,
 	"_timespanField":"-08:00:00.0000002"
 }
-
+```
 
 Is produced by these classes:
-
+```
  internal class TestClassOuter
     {
         public List<string> StrList { get; } = new List<string>() { "one", "two", "three" };
@@ -140,3 +140,4 @@ Is produced by these classes:
             return IntProperty == other?.IntProperty;
         }
     }
+```
