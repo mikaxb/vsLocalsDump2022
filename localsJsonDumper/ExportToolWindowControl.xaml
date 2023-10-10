@@ -1,0 +1,31 @@
+﻿<UserControl x:Class="LocalsJsonDumper.ExportToolWindowControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
+             Background="{DynamicResource {x:Static vsshell:VsBrushes.WindowKey}}"
+             Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"
+             mc:Ignorable="d"
+             d:DesignHeight="400" d:DesignWidth="580"
+             Name="MyToolWindow">
+    <Grid Width="auto" Height="auto" Margin="10,10,0,0" >
+        <Button Content="Generate" Name="GenerateButton" Height="23" HorizontalAlignment="Left" Margin="0,10,446,0" VerticalAlignment="Top" Width="114" Click="GenerateButtonClick"/>
+        <Button Content="Copy to clipboard" Name="CopyButton" Height="23" HorizontalAlignment="Left" Margin="0,46,441,0" VerticalAlignment="Top" Width="114" Click="CopyToClipBoardButtonClick"/>
+
+        <ComboBox  HorizontalAlignment="Left" Height="23" Margin="136,10,0,0" VerticalAlignment="Top" Width="250" Name="LocalDropDown" DropDownClosed="LocalDropDown_OnClose" DropDownOpened="LocalDropDown_OnOpen"/>
+
+        <TextBlock HorizontalAlignment="Left" Margin="391,14,0,0" TextWrapping="Wrap" Text="Unknown type" VerticalAlignment="Top"  Name="TypeInfo" Height="54" MinWidth="150" Width="163"/>
+
+        <TextBlock HorizontalAlignment="Left" Margin="138,50,0,0" TextWrapping="NoWrap" Text="Max depth:" VerticalAlignment="Top" />
+        <TextBox HorizontalAlignment="Left" Margin="203,50,0,0" TextWrapping="NoWrap" Text="7" VerticalAlignment="Top" Width="30" Name="MaxDepthInput" TextAlignment="Right"/>
+
+        <TextBlock HorizontalAlignment="Left" Margin="278,50,0,0" TextWrapping="NoWrap" Text="Timeout (s):" VerticalAlignment="Top" />
+        <TextBox HorizontalAlignment="Left" Margin="344,50,0,0" TextWrapping="NoWrap" Text="7" VerticalAlignment="Top" Width="30" Name="TimeoutInput" TextAlignment="Right"/>
+
+        <TextBox  ScrollViewer.VerticalScrollBarVisibility="Auto" Height="auto" Margin="10,75,10,35" TextWrapping="Wrap"
+                  Text="" Width="auto" Name="OutPut" MinWidth="400" MinLines="20"  />
+
+
+    </Grid>
+</UserControl>

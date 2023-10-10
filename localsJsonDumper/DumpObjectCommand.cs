@@ -98,6 +98,7 @@ namespace LocalsJsonDumper
         /// </summary>
         /// <param name="sender">Event sender.</param>
         /// <param name="e">Event args.</param>      
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "Done in CorrectStateToExecute")]
         private void Execute(object sender, EventArgs e)
         {
             if (!CorrectStateToExecute())

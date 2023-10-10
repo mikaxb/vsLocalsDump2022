@@ -44,7 +44,7 @@
         <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS" />
       </Group>
       <Group guid="guidDumpObjectCommandPackageCmdSet" id="MyMenuGroupContext" priority="0x0600">
-        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_CODEWIN"/>        
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_CODEWIN" />        
       </Group>
       <!--<Group guid="guidDumpObjectCommandPackageCmdSet" id="MyMenuGroupContextWatch" priority="0x0600">
         <Parent guid="guidVSDebugGroup" id="IDM_LOCALS_CONTEXT"/>
@@ -75,7 +75,7 @@
         <Strings>
           <ButtonText>Dump variable from locals as JSON</ButtonText>
         </Strings>
-      </Button>      
+      </Button>
     </Buttons>
 
     <!--The bitmaps section is used to define the bitmaps that are used for the commands.-->
@@ -85,6 +85,8 @@
             bitmap strip containing the bitmaps and then there are the numeric ids of the elements used
             inside a button definition. An important aspect of this declaration is that the element id
             must be the actual index (1-based) of the bitmap inside the bitmap strip. -->
+    
+      <Bitmap guid="guidImages" href="Resources\ExportToolWindowCommand.png" usedList="bmpPic1, bmpPic2, bmpPicSearch, bmpPicX, bmpPicArrows, bmpPicStrikethrough" />
     </Bitmaps>
   </Commands>
   <VisibilityConstraints>
@@ -101,9 +103,17 @@
       <IDSymbol name="MyMenuGroupContext" value="0x1030" />
       <IDSymbol name="DumpObjectCommandId" value="0x0100" />
       <IDSymbol name="DumpObjectCommandIdc" value="0x0101" />
-      <IDSymbol value="4129" name="cmdidToolWindow1Command" />
     </GuidSymbol>
 
   
+  
+    <GuidSymbol value="{81094aa7-9e2d-4537-a6bd-6a5a2d201eea}" name="guidImages">
+      <IDSymbol name="bmpPic1" value="1" />
+      <IDSymbol name="bmpPic2" value="2" />
+      <IDSymbol name="bmpPicSearch" value="3" />
+      <IDSymbol name="bmpPicX" value="4" />
+      <IDSymbol name="bmpPicArrows" value="5" />
+      <IDSymbol name="bmpPicStrikethrough" value="6" />
+    </GuidSymbol>
   </Symbols>
 </CommandTable>
