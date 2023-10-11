@@ -36,7 +36,7 @@ namespace LocalsJsonDumper
         {
             return Locals.FirstOrDefault(e =>
             {
-                Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+                ThreadHelper.ThrowIfNotOnUIThread();
                 return e.Name == localName;
             });
         }
@@ -45,7 +45,7 @@ namespace LocalsJsonDumper
         {
             try
             {
-                Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+                ThreadHelper.ThrowIfNotOnUIThread();
             }
             catch
             {
@@ -73,7 +73,7 @@ namespace LocalsJsonDumper
         {
             try
             {
-                Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+                ThreadHelper.ThrowIfNotOnUIThread();
             }
             catch
             {
@@ -100,7 +100,7 @@ namespace LocalsJsonDumper
         {
             try
             {
-                Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+                ThreadHelper.ThrowIfNotOnUIThread();
             }
             catch
             {
@@ -150,7 +150,7 @@ namespace LocalsJsonDumper
                 LocalDropDown.Items.Clear();
                 Locals.ForEach(i =>
                 {
-                    Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+                    ThreadHelper.ThrowIfNotOnUIThread();
                     LocalDropDown.Items.Add(i.Name);
                 });
             }

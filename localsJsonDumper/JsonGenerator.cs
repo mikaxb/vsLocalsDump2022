@@ -146,6 +146,12 @@ namespace LocalsJsonDumper
                 var values = new List<string>();
                 foreach (Expression dicSubExpression in currentExpression.DataMembers)
                 {
+                    if (OperationTimeoutToken.IsCancellationRequested)
+                    {
+                        Debug.WriteLine($"< Timeout occured >");
+                        return $"<Timeout occured>";
+                    }
+
                     if (PartOfCollection.IsMatch(dicSubExpression.Name))
                     {
                         string key = null;
@@ -175,6 +181,11 @@ namespace LocalsJsonDumper
                 var values = new List<string>();
                 foreach (Expression ex in currentExpression.DataMembers)
                 {
+                    if (OperationTimeoutToken.IsCancellationRequested)
+                    {
+                        Debug.WriteLine($"< Timeout occured >");
+                        return $"<Timeout occured>";
+                    }
                     if (PartOfCollection.IsMatch(ex.Name))
                     {
                         values.Add(GenerateJsonRecurse(ex, currentDepth + 1));
@@ -187,6 +198,11 @@ namespace LocalsJsonDumper
                 var values = new List<string>();
                 foreach (Expression subExpression in currentExpression.DataMembers)
                 {
+                    if (OperationTimeoutToken.IsCancellationRequested)
+                    {
+                        Debug.WriteLine($"< Timeout occured >");
+                        return $"<Timeout occured>";
+                    }
                     if (subExpression.Value == "null")
                     {
                         values.Add($"\"{subExpression.Name}\":null");
