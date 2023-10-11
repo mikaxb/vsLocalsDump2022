@@ -7,6 +7,8 @@ using System.Linq;
 using EnvDTE;
 using Expression = EnvDTE.Expression;
 using Microsoft.VisualStudio.Shell;
+using System.Threading;
+using System.Diagnostics;
 
 namespace LocalsJsonDumper
 {
@@ -26,6 +28,12 @@ namespace LocalsJsonDumper
         private DTE Dte { get; set; }
         private List<Expression> Locals { get; set; }
         private string SelectedLocal { get; set; }
+
+        private delegate Task GeneratorCallBack(string generatorResult);
+
+        private CancellationTokenSource CancellationTokenSource { get; set; }
+
+        private CancellationToken GenerationCancellationToken { get; set; }
 
         public void SetDTE(DTE dte)
         {
@@ -91,7 +99,6 @@ namespace LocalsJsonDumper
             }
             catch (Exception ex)
             {
-                TypeInfo.Text = $"Exception of type {ex.GetType()} occured";
                 OutPut.Text = $"Exception of type {ex.GetType()} occured{Environment.NewLine}{ex.Message}";
             }
         }
@@ -111,35 +118,74 @@ namespace LocalsJsonDumper
             PopulateDropDown();
         }
 
-        private void GenerateInTask(string localName, TimeSpan timeout, uint maxDepth)
+        private void Generate(string localName, TimeSpan timeout, uint maxDepth)
+        {
+            try
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+            }
+            catch
+            {
+                OutPut.Text = $"Not in correct state to execute. Not running on UI thread.";
+                return;
+            }
+            RenewLocalsFromDebugger();
+            var expression = GetExpressionFromLocals(localName);
+            if (expression is null)
+            {
+                OutPut.Text = $"Could not find local with name: {localName}";
+                return;
+            }
+            CancellationTokenSource = new CancellationTokenSource();
+            CancellationTokenSource.CancelAfter(timeout);
+            GenerationCancellationToken = CancellationTokenSource.Token;
+            GenerationCancellationToken.Register(() => GenerationCancelled());
+            GenerateInTask(expression, GenerationCancellationToken, maxDepth, HandleGeneratorResultAsync);
+        }
+
+        private void GenerateInTask(Expression expression, CancellationToken cancellationToken, uint maxDepth, GeneratorCallBack callback)
         {
             _ = Task.Run(async () =>
             {
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                var result = default(string);
                 try
                 {
-                    RenewLocalsFromDebugger();
-                    var expression = GetExpressionFromLocals(localName);
-                    if (expression is null)
-                    {
-                        OutPut.Text = $"Could not find local with name: {localName}";
-                        return;
-                    }
+                    Debug.WriteLine("Generation starting");
                     var generator = new JsonGenerator();
-                    var json = generator.GenerateJson(expression, timeout, maxDepth);
-                    OutPut.Text = json;
+                    var json = generator.GenerateJson(expression, cancellationToken, maxDepth);
+                    result = json;
                 }
                 catch (Exception ex)
                 {
-                    TypeInfo.Text = $"Exception of type {ex.GetType()} occured";
-                    OutPut.Text = $"Exception of type {ex.GetType()} occured{Environment.NewLine}{ex.Message}";
+                    result = $"Exception of type {ex.GetType()} occured{Environment.NewLine}{ex.Message}";
                 }
                 finally
                 {
-                    OutPut.TextAlignment = TextAlignment.Left;
-                    CopyButton.IsEnabled = true;
-                    GenerateButton.IsEnabled = true;
+                    Debug.WriteLine("Generation done");
+                    await callback(result);
                 }
+            });
+        }
+
+        private async Task HandleGeneratorResultAsync(string result)
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            OutPut.Text = result;
+            OutPut.TextAlignment = TextAlignment.Left;
+            GenerateButton.IsEnabled = true;
+            CopyButton.IsEnabled = true;
+            CancelButton.IsEnabled = false;
+        }
+
+        private void GenerationCancelled()
+        {
+            Debug.WriteLine("Generation cancelled");
+            _ = Task.Run(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                GenerateButton.IsEnabled = true;
+                CopyButton.IsEnabled = true;
+                CancelButton.IsEnabled = false;
             });
         }
 
@@ -174,18 +220,25 @@ namespace LocalsJsonDumper
             OutPut.TextAlignment = TextAlignment.Center;
             CopyButton.IsEnabled = false;
             GenerateButton.IsEnabled = false;
+            CancelButton.IsEnabled = true;
 
             if (ValidateAndParseInput(MaxDepthInput.Text, out var maxDepth) && ValidateAndParseInput(TimeoutInput.Text, out var timeout))
             {
-                GenerateInTask(SelectedLocal, TimeSpan.FromSeconds(timeout), maxDepth);
+                Generate(SelectedLocal, TimeSpan.FromSeconds(timeout), maxDepth);
             }
             else
             {
                 CopyButton.IsEnabled = true;
                 GenerateButton.IsEnabled = true;
+                CancelButton.IsEnabled = false;
                 OutPut.Text = "< Invalid input. Use unsigned integers. >";
                 OutPut.TextAlignment = TextAlignment.Center;
             }
+        }
+
+        private void CancelButtonClick(object sender, RoutedEventArgs e)
+        {
+            CancellationTokenSource.Cancel();
         }
 
         private bool ValidateAndParseInput(string input, out uint result)

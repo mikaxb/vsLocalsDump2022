@@ -15,13 +15,15 @@
 
         <ComboBox  HorizontalAlignment="Left" Height="23" Margin="146,10,0,0" VerticalAlignment="Top" Width="250" Name="LocalDropDown" DropDownClosed="LocalDropDown_OnClose" DropDownOpened="LocalDropDown_OnOpen"/>
 
-        <TextBlock HorizontalAlignment="Left" Margin="401,14,0,0" TextWrapping="Wrap" Text="Unknown type" VerticalAlignment="Top"  Name="TypeInfo" Height="54" MinWidth="150" Width="auto"/>
+        <TextBlock HorizontalAlignment="Left" Margin="401,14,0,0" TextWrapping="Wrap" Text="Unknown type" VerticalAlignment="Top"  Name="TypeInfo" Height="28" MinWidth="150" Width="auto"/>
 
         <TextBlock HorizontalAlignment="Left" Margin="150,50,0,0" TextWrapping="NoWrap" Text="Max depth:" VerticalAlignment="Top" />
         <TextBox HorizontalAlignment="Left" Margin="225,50,0,0" TextWrapping="NoWrap" Text="7" VerticalAlignment="Top" Width="30" Name="MaxDepthInput" TextAlignment="Right"/>
 
         <TextBlock HorizontalAlignment="Left" Margin="288,50,0,0" TextWrapping="NoWrap" Text="Timeout (s):" VerticalAlignment="Top" />
         <TextBox HorizontalAlignment="Left" Margin="354,50,0,0" TextWrapping="NoWrap" Text="16" VerticalAlignment="Top" Width="30" Name="TimeoutInput" TextAlignment="Right"/>
+
+        <Button Content="Cancel" Name="CancelButton" Height="23" HorizontalAlignment="Right" Margin="0,47,10,0" VerticalAlignment="Top" Width="114" Click="CancelButtonClick" IsEnabled="False"/>
 
         <TextBox  ScrollViewer.VerticalScrollBarVisibility="Auto" Height="auto" Margin="10,75,10,35" TextWrapping="Wrap"
                   Text="" Width="auto" Name="OutPut" MinWidth="400" MinLines="20"  />

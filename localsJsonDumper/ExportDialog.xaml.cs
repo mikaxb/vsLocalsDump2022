@@ -53,9 +53,9 @@ namespace LocalsJsonDumper
                   try
                   {
                       await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                      var generator = new JsonGenerator();
+                     /* var generator = new JsonGenerator();
                       var json = generator.GenerateJson(expression, timeout, maxDepth);
-                      OutPut.Text = json;
+                      OutPut.Text = json;*/
                       OutPut.TextAlignment = TextAlignment.Left;
                       CopyButton.IsEnabled = true;
                       GenerateButton.IsEnabled = true;
