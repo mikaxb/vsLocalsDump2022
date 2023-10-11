@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="localsJsonDumper.88f5e98f-d0bf-44b3-93ce-92592d682562" Version="1.0" Language="en-US" Publisher="Mikael Axblom" />
+        <Identity Id="localsJsonDumper.88f5e98f-d0bf-44b3-93ce-92592d682562" Version="1.1" Language="en-US" Publisher="Mikael Axblom" />
         <DisplayName>Local variable JSON dumper</DisplayName>
         <Description xml:space="preserve">An extension for Visual Studio 2022 that adds an option to dump a variable form locals in the debugger as JSON. Since it is using data from the debugger and not the objects themselves the output is not the same as one would get from most of the popular libraries. The output is what you can see in the debugger.</Description>
         <MoreInfo>https://github.com/Axeflower/vsLocalsDump2022</MoreInfo>

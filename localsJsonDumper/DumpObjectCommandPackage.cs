@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Task = System.Threading.Tasks.Task;
 
@@ -27,6 +28,8 @@ namespace LocalsJsonDumper
     [InstalledProductRegistration("#110", "#112", "1.0", IconResourceID = 400)] // Info on this package for Help/About
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [Guid(DumpObjectCommandPackage.PackageGuidString)]
+    [ProvideToolWindow(typeof(LocalsJsonDumper.ExportToolWindow), Transient = false)]
+    [ProvideToolWindowVisibility(typeof(LocalsJsonDumper.ExportToolWindow), VSConstants.UICONTEXT.Debugging_string)]
     public sealed class DumpObjectCommandPackage : AsyncPackage
     {
         /// <summary>
@@ -59,7 +62,8 @@ namespace LocalsJsonDumper
             // When initialized asynchronously, the current thread may be a background thread at this point.
             // Do any initialization that requires the UI thread after switching to the UI thread.
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-            await DumpObjectCommand.InitializeAsync(this);
+            //await DumpObjectCommand.InitializeAsync(this);
+            await LocalsJsonDumper.ExportToolWindowCommand.InitializeAsync(this);
         }
 
         #endregion Package Members

@@ -7,44 +7,35 @@ using System.Threading;
 using EnvDTE;
 
 namespace LocalsJsonDumper
-{  
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "Done in constructor.")]
+{      
     internal class JsonGenerator
     {
         public JsonGenerator()
         {
-            Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+            
         }
+
+        private const string _tokenCancelledMessage = "< Operation cancelled >";
 
         private Regex PartOfCollection { get; } = new Regex(@"\[\d+\]");
 
-        private CancellationTokenSource CancellationTokenSource { get; set; }
-
-        private CancellationToken OperationTimeoutToken { get; set; }
+        private CancellationToken OperationCancellationToken { get; set; }
 
         private uint MaxRecurseDepth { get; set; }
 
-        public string GenerateJson(Expression expression, TimeSpan timeout, uint maxDepth)
+        public string GenerateJson(Expression expression, CancellationToken cancellationToken, uint maxDepth)
         {
             try
             {
-                CancellationTokenSource = new CancellationTokenSource();
-                CancellationTokenSource.CancelAfter(timeout);
-                OperationTimeoutToken = CancellationTokenSource.Token;
+                OperationCancellationToken = cancellationToken;
                 MaxRecurseDepth = maxDepth;
                 var result = GenerateJsonRecurse(expression, 0);
                 return result;
             }
             catch (Exception ex)
             {
-                System.Windows.Forms.MessageBox.Show($"Could not generate JSON due to {ex.GetType().Name}: {ex.Message}.");
+                return $"<ERROR>{Environment.NewLine}Could not generate JSON due to {ex.GetType().Name}:{Environment.NewLine}{ex.Message}";
             }
-            return string.Empty;
-        }
-
-        public void StopGeneration()
-        {
-            CancellationTokenSource.Cancel();
         }
 
         private bool ExpressionIsDictionary(Expression exp)
@@ -123,13 +114,17 @@ namespace LocalsJsonDumper
 
             Debug.WriteLine($"Depth: {currentDepth}. {currentExpression.Type}:{currentExpression.Value}");
 
-            if (OperationTimeoutToken.IsCancellationRequested)
+            if (OperationCancellationToken.IsCancellationRequested)
             {
-                Debug.WriteLine($"< Timeout occured >");
-                return $"<Timeout occured>";
+                Debug.WriteLine(_tokenCancelledMessage);
+                return _tokenCancelledMessage;
             }
 
-            if (ExpressionIsValue(currentExpression))
+            if(currentExpression.Value == "null")
+            {
+                return "null";
+            }
+            else if(ExpressionIsValue(currentExpression))
             {
                 return $"{GetJsonRepresentationofValue(currentExpression)}";
             }
@@ -144,8 +139,19 @@ namespace LocalsJsonDumper
             else if (ExpressionIsDictionary(currentExpression))
             {
                 var values = new List<string>();
+                string DictionaryReturn()
+                {
+                    return $"{{{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}}}";
+                }
                 foreach (Expression dicSubExpression in currentExpression.DataMembers)
                 {
+                    if (OperationCancellationToken.IsCancellationRequested)
+                    {
+                        Debug.WriteLine(_tokenCancelledMessage);
+                        values.Add(_tokenCancelledMessage);
+                        return DictionaryReturn();
+                    }
+
                     if (PartOfCollection.IsMatch(dicSubExpression.Name))
                     {
                         string key = null;
@@ -168,25 +174,45 @@ namespace LocalsJsonDumper
                         }
                     }
                 }
-                return $"{{{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}}}";
+                return DictionaryReturn();
             }
             else if (ExpressionIsListOrArray(currentExpression))
             {
                 var values = new List<string>();
+                string ListReturn()
+                {
+                    return $"[{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}]";
+                }
                 foreach (Expression ex in currentExpression.DataMembers)
                 {
+                    if (OperationCancellationToken.IsCancellationRequested)
+                    {
+                        Debug.WriteLine(_tokenCancelledMessage);
+                        values.Add(_tokenCancelledMessage);
+                        return ListReturn();
+                    }
                     if (PartOfCollection.IsMatch(ex.Name))
                     {
                         values.Add(GenerateJsonRecurse(ex, currentDepth + 1));
                     }
                 }
-                return $"[{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}]";
+                return ListReturn();
             }
             else
             {
                 var values = new List<string>();
+                string ObjectReturn()
+                {
+                    return $"{{{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}}}";
+                }
                 foreach (Expression subExpression in currentExpression.DataMembers)
                 {
+                    if (OperationCancellationToken.IsCancellationRequested)
+                    {
+                        Debug.WriteLine(_tokenCancelledMessage);
+                        values.Add(_tokenCancelledMessage);
+                        return ObjectReturn();
+                    }
                     if (subExpression.Value == "null")
                     {
                         values.Add($"\"{subExpression.Name}\":null");
@@ -196,7 +222,7 @@ namespace LocalsJsonDumper
                         values.Add($"\"{subExpression.Name}\":{GenerateJsonRecurse(subExpression, currentDepth + 1)}");
                     }
                 }
-                return $"{{{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}}}";
+                return ObjectReturn();
             }
         }
 
