@@ -129,7 +129,11 @@ namespace LocalsJsonDumper
                 return $"<Timeout occured>";
             }
 
-            if (ExpressionIsValue(currentExpression))
+            if(currentExpression.Value == "null")
+            {
+                return "null";
+            }
+            else if(ExpressionIsValue(currentExpression))
             {
                 return $"{GetJsonRepresentationofValue(currentExpression)}";
             }
