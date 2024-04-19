@@ -44,12 +44,28 @@ namespace LocalsJsonDumper
             {
                 return true;
             }
+            if (exp.Type.StartsWith("System.Collections.Generic.IDictionary"))
+            {
+                return true;
+            }
             return false;
         }
 
         private bool ExpressionIsListOrArray(Expression exp)
         {
             if (exp.Type.StartsWith("System.Collections.Generic.List"))
+            {
+                return true;
+            }
+            if (exp.Type.StartsWith("System.Collections.Generic.ICollection"))
+            {
+                return true;
+            }
+            if (exp.Type.StartsWith("System.Collections.Generic.IList"))
+            {
+                return true;
+            }
+            if (exp.Type.StartsWith("System.Collections.Generic.IEnumerable"))
             {
                 return true;
             }
@@ -112,7 +128,7 @@ namespace LocalsJsonDumper
                 return $"< Could not evaluate Expression. Check that a known type is selected. >";
             }
 
-            Debug.WriteLine($"Depth: {currentDepth}. {currentExpression.Type}:{currentExpression.Value}");
+            Debug.WriteLine($"Depth: {currentDepth}. {currentExpression.Name} {currentExpression.Type}:{currentExpression.Value}");
 
             if (OperationCancellationToken.IsCancellationRequested)
             {
@@ -206,12 +222,18 @@ namespace LocalsJsonDumper
                     return $"{{{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}}}";
                 }
                 foreach (Expression subExpression in currentExpression.DataMembers)
-                {
+                {                   
                     if (OperationCancellationToken.IsCancellationRequested)
                     {
                         Debug.WriteLine(_tokenCancelledMessage);
                         values.Add(_tokenCancelledMessage);
                         return ObjectReturn();
+                    }
+                    //Omit this. It is automatically part of record-objects.
+                    if (subExpression.Name == "EqualityContract")
+                    {
+                        Debug.WriteLine("Omitting EqualityContract");
+                        continue;
                     }
                     if (subExpression.Value == "null")
                     {
