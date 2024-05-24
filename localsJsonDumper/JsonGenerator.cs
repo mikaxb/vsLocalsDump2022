@@ -84,6 +84,7 @@ namespace LocalsJsonDumper
                 case "System.DateTime":
                 case "System.TimeSpan":
                 case "System.DateTimeOffset":
+                case "System.Guid":
                 case "int":
                 case "uint":
                 case "char":
@@ -186,7 +187,7 @@ namespace LocalsJsonDumper
 
                         if (!string.IsNullOrEmpty(key))
                         {
-                            values.Add($"\"{key.Trim('"')}\":{value}");
+                            values.Add($"\"{key.Trim('"')}\": {value}");
                         }
                     }
                 }
@@ -237,11 +238,11 @@ namespace LocalsJsonDumper
                     }
                     if (subExpression.Value == "null")
                     {
-                        values.Add($"\"{subExpression.Name}\":null");
+                        values.Add($"\"{subExpression.Name}\": null");
                     }
                     else
                     {
-                        values.Add($"\"{subExpression.Name}\":{GenerateJsonRecurse(subExpression, currentDepth + 1)}");
+                        values.Add($"\"{subExpression.Name}\": {GenerateJsonRecurse(subExpression, currentDepth + 1)}");
                     }
                 }
                 return ObjectReturn();
@@ -269,6 +270,7 @@ namespace LocalsJsonDumper
         {
             switch (exp.Type.Trim('?'))
             {
+                case "System.Guid":
                 case "System.DateTime":
                 case "System.TimeSpan":
                 case "System.DateTimeOffset":
