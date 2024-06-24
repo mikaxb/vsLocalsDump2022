@@ -9,6 +9,8 @@ using Expression = EnvDTE.Expression;
 using Microsoft.VisualStudio.Shell;
 using System.Threading;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
+using Microsoft.VisualStudio.Debugger.Interop;
 
 namespace LocalsJsonDumper
 {
@@ -118,7 +120,7 @@ namespace LocalsJsonDumper
             PopulateDropDown();
         }
 
-        private void Generate(string localName, TimeSpan timeout, uint maxDepth)
+        private void Generate(string localName, TimeSpan timeout, uint maxDepth, Regex nameIgnoreRegex, Regex typeIgnoreRegex)
         {
             try
             {
@@ -140,10 +142,10 @@ namespace LocalsJsonDumper
             CancellationTokenSource.CancelAfter(timeout);
             GenerationCancellationToken = CancellationTokenSource.Token;
             GenerationCancellationToken.Register(() => GenerationCancelled());
-            GenerateInTask(expression, GenerationCancellationToken, maxDepth, HandleGeneratorResultAsync);
+            GenerateInTask(expression, GenerationCancellationToken, maxDepth, nameIgnoreRegex, typeIgnoreRegex, HandleGeneratorResultAsync);
         }
 
-        private void GenerateInTask(Expression expression, CancellationToken cancellationToken, uint maxDepth, GeneratorCallBack callback)
+        private void GenerateInTask(Expression expression, CancellationToken cancellationToken, uint maxDepth, Regex nameIgnoreRegex, Regex typeIgnoreRegex, GeneratorCallBack callback)
         {
             _ = Task.Run(async () =>
             {
@@ -152,7 +154,7 @@ namespace LocalsJsonDumper
                 {
                     Debug.WriteLine("Generation starting");
                     var generator = new JsonGenerator();
-                    var json = generator.GenerateJson(expression, cancellationToken, maxDepth);
+                    var json = generator.GenerateJson(expression, cancellationToken, maxDepth, nameIgnoreRegex, typeIgnoreRegex);
                     result = json;
                 }
                 catch (Exception ex)
@@ -224,7 +226,7 @@ namespace LocalsJsonDumper
 
             if (ValidateAndParseInput(MaxDepthInput.Text, out var maxDepth) && ValidateAndParseInput(TimeoutInput.Text, out var timeout))
             {
-                Generate(SelectedLocal, TimeSpan.FromSeconds(timeout), maxDepth);
+                Generate(SelectedLocal, TimeSpan.FromSeconds(timeout), maxDepth, new Regex(NameIgnoreRegexInput.Text), new Regex(TypeIgnoreRegexInput.Text));
             }
             else
             {

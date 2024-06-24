@@ -7,27 +7,35 @@
              Background="{DynamicResource {x:Static vsshell:VsBrushes.WindowKey}}"
              Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"
              mc:Ignorable="d"
-             d:DesignHeight="400" d:DesignWidth="580"
+             d:DesignHeight="400" d:DesignWidth="746.691"
              Name="MyToolWindow">
     <Grid Width="auto" Height="auto" Margin="10,10,0,0" >
-        <Button Content="Generate" Name="GenerateButton" Height="23" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="114" Click="GenerateButtonClick"/>
-        <Button Content="Copy to clipboard" Name="CopyButton" Height="23" HorizontalAlignment="Left" Margin="10,46,0,0" VerticalAlignment="Top" Width="114" Click="CopyToClipBoardButtonClick"/>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="20*"/>
+            <RowDefinition Height="20*"/>
+            <RowDefinition Height="20*"/>
+            <RowDefinition Height="167*"/>
+        </Grid.RowDefinitions>
+        <Button Content="Generate" Name="GenerateButton"  Grid.Row="0" Height="23" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Center" Width="114" Click="GenerateButtonClick"/>
+        <ComboBox  HorizontalAlignment="Left" Grid.Row="0" Height="23" Margin="146,0,0,0" VerticalAlignment="Center" Width="250" Name="LocalDropDown" DropDownClosed="LocalDropDown_OnClose" DropDownOpened="LocalDropDown_OnOpen"/>
+        <TextBlock HorizontalAlignment="Left" Margin="401,0,0,0" Grid.Row="0" TextWrapping="Wrap" Text="Unknown type" VerticalAlignment="Center"  Name="TypeInfo" MinWidth="150" Width="auto"/>
+        <Button Content="Cancel" Name="CancelButton" Height="23" Grid.Row="0" HorizontalAlignment="Right" Margin="0,0,10,0" VerticalAlignment="Center" Width="114" Click="CancelButtonClick" IsEnabled="False"/>
 
-        <ComboBox  HorizontalAlignment="Left" Height="23" Margin="146,10,0,0" VerticalAlignment="Top" Width="250" Name="LocalDropDown" DropDownClosed="LocalDropDown_OnClose" DropDownOpened="LocalDropDown_OnOpen"/>
 
-        <TextBlock HorizontalAlignment="Left" Margin="401,14,0,0" TextWrapping="Wrap" Text="Unknown type" VerticalAlignment="Top"  Name="TypeInfo" Height="28" MinWidth="150" Width="auto"/>
+        <Button Content="Copy to clipboard" Name="CopyButton"  Grid.Row="1" Height="23" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Center" Width="114" Click="CopyToClipBoardButtonClick" />
+        <TextBlock HorizontalAlignment="Left" Margin="150,0,0,0" Grid.Row="1" TextWrapping="NoWrap" Text="Max depth:" VerticalAlignment="Center" />
+        <TextBox HorizontalAlignment="Left" Margin="225,0,0,0" Grid.Row="1" TextWrapping="NoWrap" Text="7" VerticalAlignment="Center" Width="30" Name="MaxDepthInput" TextAlignment="Right"/>
+        <TextBlock HorizontalAlignment="Left" Margin="260,0,0,0" Grid.Row="1" TextWrapping="NoWrap" Text="Timeout (s):" VerticalAlignment="Center" />
+        <TextBox HorizontalAlignment="Left" Margin="326,0,0,0" Grid.Row="1" TextWrapping="NoWrap" Text="16" VerticalAlignment="Center" Width="30" Name="TimeoutInput" TextAlignment="Right"/>
 
-        <TextBlock HorizontalAlignment="Left" Margin="150,50,0,0" TextWrapping="NoWrap" Text="Max depth:" VerticalAlignment="Top" />
-        <TextBox HorizontalAlignment="Left" Margin="225,50,0,0" TextWrapping="NoWrap" Text="7" VerticalAlignment="Top" Width="30" Name="MaxDepthInput" TextAlignment="Right"/>
 
-        <TextBlock HorizontalAlignment="Left" Margin="288,50,0,0" TextWrapping="NoWrap" Text="Timeout (s):" VerticalAlignment="Top" />
-        <TextBox HorizontalAlignment="Left" Margin="354,50,0,0" TextWrapping="NoWrap" Text="16" VerticalAlignment="Top" Width="30" Name="TimeoutInput" TextAlignment="Right"/>
+        <TextBlock HorizontalAlignment="Left" Margin="15,0,0,0" TextWrapping="NoWrap" Text="Name ignore regex:" VerticalAlignment="Center" Grid.Row="2" />
+        <TextBox HorizontalAlignment="Left" Margin="124,0,0,0" TextWrapping="NoWrap" Text="" VerticalAlignment="Center" Width="232" Name="NameIgnoreRegexInput" TextAlignment="Left" Grid.Row="2"/>
+        <TextBlock HorizontalAlignment="Left" Margin="365,0,0,0" TextWrapping="NoWrap" Text="Type ignore regex:" VerticalAlignment="Center" Grid.Row="2" />
+        <TextBox HorizontalAlignment="Left" Margin="468,0,0,0" TextWrapping="NoWrap" Text="" VerticalAlignment="Center" Width="217" Name="TypeIgnoreRegexInput" TextAlignment="Left" Grid.Row="2"/>
 
-        <Button Content="Cancel" Name="CancelButton" Height="23" HorizontalAlignment="Right" Margin="0,47,10,0" VerticalAlignment="Top" Width="114" Click="CancelButtonClick" IsEnabled="False"/>
-
-        <TextBox  ScrollViewer.VerticalScrollBarVisibility="Auto" Height="auto" Margin="10,75,10,35" TextWrapping="Wrap"
-                  Text="" Width="auto" Name="OutPut" MinWidth="400" MinLines="20"  />
-
+        <TextBox  ScrollViewer.VerticalScrollBarVisibility="Auto" Height="auto" Margin="10,0,10,10" TextWrapping="Wrap"  Grid.Row="3"
+                  Text="" Width="auto" Name="OutPut" MinWidth="400" MinLines="20" />
 
     </Grid>
 </UserControl>

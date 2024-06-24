@@ -23,12 +23,26 @@ namespace LocalsJsonDumper
 
         private uint MaxRecurseDepth { get; set; }
 
-        public string GenerateJson(Expression expression, CancellationToken cancellationToken, uint maxDepth)
+        private Regex IgnorePropNameRegex { get; set; }
+
+        private Regex IgnorePropTypeRegex { get; set; }
+
+        public string GenerateJson(Expression expression, CancellationToken cancellationToken, uint maxDepth, Regex nameIgnoreRegex, Regex typeIgnoreRegex)
         {
             try
             {
                 OperationCancellationToken = cancellationToken;
                 MaxRecurseDepth = maxDepth;
+                IgnorePropNameRegex = null;
+                if (nameIgnoreRegex.ToString() != string.Empty)
+                {
+                    IgnorePropNameRegex = nameIgnoreRegex;
+                }
+                IgnorePropTypeRegex = null;
+                if (typeIgnoreRegex.ToString() != string.Empty)
+                {
+                    IgnorePropTypeRegex = typeIgnoreRegex;
+                }
                 var result = GenerateJsonRecurse(expression, 0);
                 return result;
             }
@@ -234,6 +248,17 @@ namespace LocalsJsonDumper
                     if (subExpression.Name == "EqualityContract")
                     {
                         Debug.WriteLine("Omitting EqualityContract");
+                        continue;
+                    }
+                    //Skip user filtered properties
+                    if (IgnorePropNameRegex != null && IgnorePropNameRegex.IsMatch(subExpression.Name))
+                    {
+                        Debug.WriteLine($"Ignoring {subExpression.Name} due to name regex match: {IgnorePropNameRegex}");
+                        continue;
+                    }
+                    if (IgnorePropTypeRegex != null && IgnorePropTypeRegex.IsMatch(subExpression.Type))
+                    {
+                        Debug.WriteLine($"Ignoring {subExpression.Type} due to type regex match: {IgnorePropTypeRegex}");
                         continue;
                     }
                     if (subExpression.Value == "null")
