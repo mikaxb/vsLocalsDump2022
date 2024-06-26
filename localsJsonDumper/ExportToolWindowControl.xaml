@@ -9,7 +9,7 @@
              mc:Ignorable="d"
              d:DesignHeight="400" d:DesignWidth="746.691"
              Name="MyToolWindow">
-    <Grid Width="auto" Height="auto" Margin="10,10,0,0" >
+    <Grid Width="auto" Height="auto" Margin="0,0,0,0" >
         <Grid.RowDefinitions>
             <RowDefinition Height="20*"/>
             <RowDefinition Height="20*"/>
