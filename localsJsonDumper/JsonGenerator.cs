@@ -101,6 +101,8 @@ namespace LocalsJsonDumper
                 case "System.Guid":
                 case "int":
                 case "uint":
+                case "nint":
+                case "nuint":
                 case "char":
                 case "bool":
                 case "double":
@@ -285,7 +287,7 @@ namespace LocalsJsonDumper
 
             for (int i = 0; i < depth; i++)
             {
-                indentation.Append("\t");
+                indentation.Append("  ");
             }
 
             return indentation.ToString();

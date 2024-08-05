@@ -10,7 +10,6 @@ using Microsoft.VisualStudio.Shell;
 using System.Threading;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
-using Microsoft.VisualStudio.Debugger.Interop;
 
 namespace LocalsJsonDumper
 {
@@ -25,17 +24,29 @@ namespace LocalsJsonDumper
         public ExportToolWindowControl()
         {
             InitializeComponent();
+            LocalDropDown.Items.Clear();
+            OutPut.Text = string.Empty;
+            EngineChoiceBox.ItemsSource = Engines;
+            EngineChoiceBox.SelectionChanged += EngineChanged;
+            EngineChoiceBox.SelectedItem = Engines.First(e => e.Generator == EngineGenerator.SystemTextJson);
         }
 
         private DTE Dte { get; set; }
         private List<Expression> Locals { get; set; }
         private string SelectedLocal { get; set; }
 
-        private delegate Task GeneratorCallBack(string generatorResult);
+        private delegate Task GeneratorDoneCallBack(string generatorResult);
 
         private CancellationTokenSource CancellationTokenSource { get; set; }
 
         private CancellationToken GenerationCancellationToken { get; set; }
+
+        private bool UseSystemTextJson => (EngineChoiceBox.SelectedItem as EngineListItem)?.Generator == EngineGenerator.SystemTextJson;
+
+        private List<EngineListItem> Engines { get; } = new List<EngineListItem>() {
+            new EngineListItem() { Generator = EngineGenerator.SystemTextJson, Text = "GetExpression with C# System.Text.Json" },
+            new EngineListItem() { Generator = EngineGenerator.TreeClimber, Text = "Traverse Expression tree" }
+        };
 
         public void SetDTE(DTE dte)
         {
@@ -120,7 +131,7 @@ namespace LocalsJsonDumper
             PopulateDropDown();
         }
 
-        private void Generate(string localName, TimeSpan timeout, uint maxDepth, Regex nameIgnoreRegex, Regex typeIgnoreRegex)
+        private void Generate(string localName, TimeSpan timeout, uint maxDepth, Regex nameIgnoreRegex, Regex typeIgnoreRegex, bool includeFields)
         {
             try
             {
@@ -138,14 +149,55 @@ namespace LocalsJsonDumper
                 OutPut.Text = $"Could not find local with name: {localName}";
                 return;
             }
-            CancellationTokenSource = new CancellationTokenSource();
-            CancellationTokenSource.CancelAfter(timeout);
-            GenerationCancellationToken = CancellationTokenSource.Token;
-            GenerationCancellationToken.Register(() => GenerationCancelled());
-            GenerateInTask(expression, GenerationCancellationToken, maxDepth, nameIgnoreRegex, typeIgnoreRegex, HandleGeneratorResultAsync);
+
+            if (UseSystemTextJson)
+            {
+                GenerateUsingSystemTextJson(localName, includeFields, maxDepth, HandleGeneratorResultAsync);
+            }
+            else
+            {
+                CancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource.CancelAfter(timeout);
+                GenerationCancellationToken = CancellationTokenSource.Token;
+                GenerationCancellationToken.Register(() => GenerationCancelled());
+                GenerateUsingExpressionTree(expression, GenerationCancellationToken, maxDepth, nameIgnoreRegex, typeIgnoreRegex, HandleGeneratorResultAsync);
+            }
         }
 
-        private void GenerateInTask(Expression expression, CancellationToken cancellationToken, uint maxDepth, Regex nameIgnoreRegex, Regex typeIgnoreRegex, GeneratorCallBack callback)
+        private void GenerateUsingSystemTextJson(string localName, bool includeFields, uint maxDepth, GeneratorDoneCallBack callback)
+        {
+            _ = Task.Run(async () =>
+            {
+                var result = default(string);
+                try
+                {
+                    Debug.WriteLine("Generation starting");
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    var jsonExpression = Dte?.Debugger.GetExpression($"System.Text.Json.JsonSerializer.Serialize({localName},new System.Text.Json.JsonSerializerOptions(){{IncludeFields = {includeFields.ToString().ToLowerInvariant()}}})");
+                    if (jsonExpression.IsValidValue)
+                    {
+                        var unescapedAndTrimmedValue = Regex.Unescape(jsonExpression.Value).Trim('"');
+                        var reDeserializedObject = System.Text.Json.JsonSerializer.Deserialize<object>(unescapedAndTrimmedValue);
+                        result = System.Text.Json.JsonSerializer.Serialize(reDeserializedObject, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                    }
+                    else
+                    {
+                        result = jsonExpression.Value;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    result = $"Exception of type {ex.GetType()} occured{Environment.NewLine}{ex.Message}";
+                }
+                finally
+                {
+                    Debug.WriteLine("Generation done");
+                    await callback(result);
+                }
+            });
+        }
+
+        private void GenerateUsingExpressionTree(Expression expression, CancellationToken cancellationToken, uint maxDepth, Regex nameIgnoreRegex, Regex typeIgnoreRegex, GeneratorDoneCallBack callback)
         {
             _ = Task.Run(async () =>
             {
@@ -195,10 +247,10 @@ namespace LocalsJsonDumper
         {
             try
             {
+                ThreadHelper.ThrowIfNotOnUIThread();
                 LocalDropDown.Items.Clear();
-                Locals.ForEach(i =>
+                Locals.OrderBy(e => e.Name).ToList().ForEach(i =>
                 {
-                    ThreadHelper.ThrowIfNotOnUIThread();
                     LocalDropDown.Items.Add(i.Name);
                 });
             }
@@ -222,11 +274,11 @@ namespace LocalsJsonDumper
             OutPut.TextAlignment = TextAlignment.Center;
             CopyButton.IsEnabled = false;
             GenerateButton.IsEnabled = false;
-            CancelButton.IsEnabled = true;
+            CancelButton.IsEnabled = !UseSystemTextJson;
 
             if (ValidateAndParseInput(MaxDepthInput.Text, out var maxDepth) && ValidateAndParseInput(TimeoutInput.Text, out var timeout))
             {
-                Generate(SelectedLocal, TimeSpan.FromSeconds(timeout), maxDepth, new Regex(NameIgnoreRegexInput.Text), new Regex(TypeIgnoreRegexInput.Text));
+                Generate(SelectedLocal, TimeSpan.FromSeconds(timeout), maxDepth, new Regex(NameIgnoreRegexInput.Text), new Regex(TypeIgnoreRegexInput.Text), IncludeFields.IsChecked ?? false);
             }
             else
             {
@@ -240,7 +292,7 @@ namespace LocalsJsonDumper
 
         private void CancelButtonClick(object sender, RoutedEventArgs e)
         {
-            CancellationTokenSource.Cancel();
+            CancellationTokenSource?.Cancel();
         }
 
         private bool ValidateAndParseInput(string input, out uint result)
@@ -259,5 +311,37 @@ namespace LocalsJsonDumper
             Clipboard.SetText(OutPut.Text);
         }
 
+        private void EngineChanged(object sender, RoutedEventArgs e)
+        {
+            if (UseSystemTextJson)
+            {
+                SystemTextControls.Visibility = Visibility.Visible;
+                TreeClimberControls.Visibility = Visibility.Collapsed;
+                RegexControls.Visibility = Visibility.Collapsed;       
+            }
+            else
+            {
+                SystemTextControls.Visibility = Visibility.Collapsed;
+                TreeClimberControls.Visibility = Visibility.Visible;               
+                RegexControls.Visibility = Visibility.Visible;
+            }
+        }
+
+        private enum EngineGenerator
+        {
+            SystemTextJson,
+            TreeClimber
+        }
+
+        private class EngineListItem
+        {
+            public EngineGenerator Generator { get; set; }
+            public string Text { get; set; }
+
+            public override string ToString()
+            {
+                return Text;
+            }
+        }
     }
 }

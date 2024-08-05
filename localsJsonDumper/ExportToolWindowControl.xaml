@@ -7,35 +7,45 @@
              Background="{DynamicResource {x:Static vsshell:VsBrushes.WindowKey}}"
              Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"
              mc:Ignorable="d"
-             d:DesignHeight="400" d:DesignWidth="746.691"
+             d:DesignHeight="400" d:DesignWidth="747"
              Name="MyToolWindow">
     <Grid Width="auto" Height="auto" Margin="0,0,0,0" >
         <Grid.RowDefinitions>
-            <RowDefinition Height="20*"/>
-            <RowDefinition Height="20*"/>
-            <RowDefinition Height="20*"/>
-            <RowDefinition Height="167*"/>
+            <RowDefinition Height="29"/>
+            <RowDefinition Height="29"/>
+            <RowDefinition Height="29"/>
+            <RowDefinition Height="227*"/>
         </Grid.RowDefinitions>
-        <Button Content="Generate" Name="GenerateButton"  Grid.Row="0" Height="23" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Center" Width="114" Click="GenerateButtonClick"/>
-        <ComboBox  HorizontalAlignment="Left" Grid.Row="0" Height="23" Margin="146,0,0,0" VerticalAlignment="Center" Width="250" Name="LocalDropDown" DropDownClosed="LocalDropDown_OnClose" DropDownOpened="LocalDropDown_OnOpen"/>
-        <TextBlock HorizontalAlignment="Left" Margin="401,0,0,0" Grid.Row="0" TextWrapping="Wrap" Text="Unknown type" VerticalAlignment="Center"  Name="TypeInfo" MinWidth="150" Width="auto"/>
-        <Button Content="Cancel" Name="CancelButton" Height="23" Grid.Row="0" HorizontalAlignment="Right" Margin="0,0,10,0" VerticalAlignment="Center" Width="114" Click="CancelButtonClick" IsEnabled="False"/>
+        <StackPanel Orientation="Horizontal" Margin="10,0,0,0" Grid.Row="0"  VerticalAlignment="Center" >
+            <Button Content="Generate" Name="GenerateButton" HorizontalAlignment="Left" Padding="0,2,0,2" VerticalAlignment="Center" Width="114" Click="GenerateButtonClick"/>
+            <ComboBox  HorizontalAlignment="Left"  Margin="20,0,0,0" VerticalAlignment="Center" Width="250" Name="LocalDropDown" DropDownClosed="LocalDropDown_OnClose" DropDownOpened="LocalDropDown_OnOpen"/>
+            <TextBlock HorizontalAlignment="Left" Margin="6,0,0,0" TextWrapping="Wrap" Text="Unknown type" VerticalAlignment="Center"  Name="TypeInfo" MinWidth="150" Width="auto"/>            
+        </StackPanel>
+        <Button Content="Cancel" Name="CancelButton" Padding="0,2,0,2" HorizontalAlignment="Right" Margin="0,0,10,0" VerticalAlignment="Center" Width="114" Click="CancelButtonClick" IsEnabled="False"  Grid.Row="0"/>
+        
+        <StackPanel Orientation="Horizontal" Margin="10,0,0,0" Grid.Row="1"  VerticalAlignment="Center" >
+            <Button Content="Copy to clipboard" Padding="0,2,0,2" Name="CopyButton"  HorizontalAlignment="Left"  VerticalAlignment="Center" Width="114" Click="CopyToClipBoardButtonClick" />
+            <TextBlock Text="Generator:" HorizontalAlignment="Left" Margin="22,0,0,0" VerticalAlignment="Center"/>
+            <ComboBox Name="EngineChoiceBox" HorizontalAlignment="Left" Margin="6,0,0,0" VerticalAlignment="Center" Width="auto"/>
+            <StackPanel Grid.Row="1" Name="TreeClimberControls" Visibility="Visible" HorizontalAlignment="Left" Orientation="Horizontal"  Margin="12,0,0,0">
+                <TextBlock HorizontalAlignment="Left" TextWrapping="NoWrap" Text="Max depth:" VerticalAlignment="Center" Name="MaxDepthInputText" />
+                <TextBox HorizontalAlignment="Left" TextWrapping="NoWrap" Text="7" VerticalAlignment="Center" Width="30" Name="MaxDepthInput" TextAlignment="Right" Margin="3,0,0,0"/>
+                <TextBlock HorizontalAlignment="Left"  TextWrapping="NoWrap" Text="Timeout (s):" VerticalAlignment="Center" Name="TimeoutInputText" Margin="12,0,0,0"/>
+                <TextBox HorizontalAlignment="Left" TextWrapping="NoWrap" Text="16" VerticalAlignment="Center" Width="30" Name="TimeoutInput" TextAlignment="Right" Margin="3,0,0,0"/>
+            </StackPanel>
+            <StackPanel Grid.Row="1" Name="SystemTextControls" HorizontalAlignment="Left" Orientation="Horizontal" Margin="10,0,0,0" Visibility="Collapsed">
+                <TextBlock HorizontalAlignment="Left"  TextWrapping="NoWrap" Text="Include fields:" VerticalAlignment="Center" Name="IncludeFieldsText"/>
+                <CheckBox HorizontalAlignment="Left"  VerticalAlignment="Center" Name="IncludeFields" Margin="3,0,0,0" />
+            </StackPanel>
+        </StackPanel>
 
-
-        <Button Content="Copy to clipboard" Name="CopyButton"  Grid.Row="1" Height="23" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Center" Width="114" Click="CopyToClipBoardButtonClick" />
-        <TextBlock HorizontalAlignment="Left" Margin="150,0,0,0" Grid.Row="1" TextWrapping="NoWrap" Text="Max depth:" VerticalAlignment="Center" />
-        <TextBox HorizontalAlignment="Left" Margin="225,0,0,0" Grid.Row="1" TextWrapping="NoWrap" Text="7" VerticalAlignment="Center" Width="30" Name="MaxDepthInput" TextAlignment="Right"/>
-        <TextBlock HorizontalAlignment="Left" Margin="260,0,0,0" Grid.Row="1" TextWrapping="NoWrap" Text="Timeout (s):" VerticalAlignment="Center" />
-        <TextBox HorizontalAlignment="Left" Margin="326,0,0,0" Grid.Row="1" TextWrapping="NoWrap" Text="16" VerticalAlignment="Center" Width="30" Name="TimeoutInput" TextAlignment="Right"/>
-
-
-        <TextBlock HorizontalAlignment="Left" Margin="15,0,0,0" TextWrapping="NoWrap" Text="Name ignore regex:" VerticalAlignment="Center" Grid.Row="2" />
-        <TextBox HorizontalAlignment="Left" Margin="124,0,0,0" TextWrapping="NoWrap" Text="" VerticalAlignment="Center" Width="232" Name="NameIgnoreRegexInput" TextAlignment="Left" Grid.Row="2"/>
-        <TextBlock HorizontalAlignment="Left" Margin="365,0,0,0" TextWrapping="NoWrap" Text="Type ignore regex:" VerticalAlignment="Center" Grid.Row="2" />
-        <TextBox HorizontalAlignment="Left" Margin="468,0,0,0" TextWrapping="NoWrap" Text="" VerticalAlignment="Center" Width="217" Name="TypeIgnoreRegexInput" TextAlignment="Left" Grid.Row="2"/>
-
+        <StackPanel  Margin="16,0,0,0" Grid.Row="2" Name="RegexControls" Orientation="Horizontal">
+            <TextBlock HorizontalAlignment="Left" Margin="0,0,0,0" TextWrapping="NoWrap" Text="Name ignore regex:" VerticalAlignment="Center" />
+            <TextBox HorizontalAlignment="Left" Margin="10,0,0,0" TextWrapping="NoWrap" Text="" VerticalAlignment="Center" Width="232" Name="NameIgnoreRegexInput" TextAlignment="Left" />
+            <TextBlock HorizontalAlignment="Left" Margin="10,0,0,0" TextWrapping="NoWrap" Text="Type ignore regex:" VerticalAlignment="Center"  />
+            <TextBox HorizontalAlignment="Left" Margin="10,0,0,0" TextWrapping="NoWrap" Text="" VerticalAlignment="Center" Width="217" Name="TypeIgnoreRegexInput" TextAlignment="Left" />
+        </StackPanel>
         <TextBox  ScrollViewer.VerticalScrollBarVisibility="Auto" Height="auto" Margin="10,0,10,10" TextWrapping="Wrap"  Grid.Row="3"
-                  Text="" Width="auto" Name="OutPut" MinWidth="400" MinLines="20" />
-
+                  Text="" Width="auto" Name="OutPut" MinWidth="400" MinLines="20" Grid.RowSpan="2" />
     </Grid>
 </UserControl>
