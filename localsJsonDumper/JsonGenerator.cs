@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using EnvDTE;
+using EnvDTE100;
 
 namespace LocalsJsonDumper
 {      
@@ -23,12 +23,26 @@ namespace LocalsJsonDumper
 
         private uint MaxRecurseDepth { get; set; }
 
-        public string GenerateJson(Expression expression, CancellationToken cancellationToken, uint maxDepth)
+        private Regex IgnorePropNameRegex { get; set; }
+
+        private Regex IgnorePropTypeRegex { get; set; }
+
+        public string GenerateJson(Expression2 expression, CancellationToken cancellationToken, uint maxDepth, Regex nameIgnoreRegex, Regex typeIgnoreRegex)
         {
             try
             {
                 OperationCancellationToken = cancellationToken;
                 MaxRecurseDepth = maxDepth;
+                IgnorePropNameRegex = null;
+                if (nameIgnoreRegex.ToString() != string.Empty)
+                {
+                    IgnorePropNameRegex = nameIgnoreRegex;
+                }
+                IgnorePropTypeRegex = null;
+                if (typeIgnoreRegex.ToString() != string.Empty)
+                {
+                    IgnorePropTypeRegex = typeIgnoreRegex;
+                }
                 var result = GenerateJsonRecurse(expression, 0);
                 return result;
             }
@@ -38,7 +52,7 @@ namespace LocalsJsonDumper
             }
         }
 
-        private bool ExpressionIsDictionary(Expression exp)
+        private bool ExpressionIsDictionary(Expression2 exp)
         {
             if (exp.Type.StartsWith("System.Collections.Generic.Dictionary"))
             {
@@ -51,7 +65,7 @@ namespace LocalsJsonDumper
             return false;
         }
 
-        private bool ExpressionIsListOrArray(Expression exp)
+        private bool ExpressionIsListOrArray(Expression2 exp)
         {
             if (exp.Type.StartsWith("System.Collections.Generic.List"))
             {
@@ -76,7 +90,7 @@ namespace LocalsJsonDumper
             return false;
         }
 
-        private bool ExpressionIsValue(Expression exp)
+        private bool ExpressionIsValue(Expression2 exp)
         {
             switch (exp.Type.Trim('?'))
             {
@@ -87,6 +101,8 @@ namespace LocalsJsonDumper
                 case "System.Guid":
                 case "int":
                 case "uint":
+                case "nint":
+                case "nuint":
                 case "char":
                 case "bool":
                 case "double":
@@ -105,7 +121,7 @@ namespace LocalsJsonDumper
             }
         }
 
-        private bool ExpressionIsEnum(Expression exp)
+        private bool ExpressionIsEnum(Expression2 exp)
         {
             if (exp.DataMembers.Count > 0)
             {
@@ -122,7 +138,7 @@ namespace LocalsJsonDumper
             return true;
         }
 
-        private string GenerateJsonRecurse(Expression currentExpression, uint currentDepth)
+        private string GenerateJsonRecurse(Expression2 currentExpression, uint currentDepth)
         {
             if (currentExpression == null)
             {
@@ -160,7 +176,7 @@ namespace LocalsJsonDumper
                 {
                     return $"{{{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}}}";
                 }
-                foreach (Expression dicSubExpression in currentExpression.DataMembers)
+                foreach (Expression2 dicSubExpression in currentExpression.DataMembers)
                 {
                     if (OperationCancellationToken.IsCancellationRequested)
                     {
@@ -173,7 +189,7 @@ namespace LocalsJsonDumper
                     {
                         string key = null;
                         string value = null;
-                        foreach (Expression dicCollectionExpression in dicSubExpression.DataMembers)
+                        foreach (Expression2 dicCollectionExpression in dicSubExpression.DataMembers)
                         {
                             if (dicCollectionExpression.Name == "Key")
                             {
@@ -200,7 +216,7 @@ namespace LocalsJsonDumper
                 {
                     return $"[{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}]";
                 }
-                foreach (Expression ex in currentExpression.DataMembers)
+                foreach (Expression2 ex in currentExpression.DataMembers)
                 {
                     if (OperationCancellationToken.IsCancellationRequested)
                     {
@@ -222,7 +238,7 @@ namespace LocalsJsonDumper
                 {
                     return $"{{{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}}}";
                 }
-                foreach (Expression subExpression in currentExpression.DataMembers)
+                foreach (Expression2 subExpression in currentExpression.DataMembers)
                 {                   
                     if (OperationCancellationToken.IsCancellationRequested)
                     {
@@ -234,6 +250,17 @@ namespace LocalsJsonDumper
                     if (subExpression.Name == "EqualityContract")
                     {
                         Debug.WriteLine("Omitting EqualityContract");
+                        continue;
+                    }
+                    //Skip user filtered properties
+                    if (IgnorePropNameRegex != null && IgnorePropNameRegex.IsMatch(subExpression.Name))
+                    {
+                        Debug.WriteLine($"Ignoring {subExpression.Name} due to name regex match: {IgnorePropNameRegex}");
+                        continue;
+                    }
+                    if (IgnorePropTypeRegex != null && IgnorePropTypeRegex.IsMatch(subExpression.Type))
+                    {
+                        Debug.WriteLine($"Ignoring {subExpression.Type} due to type regex match: {IgnorePropTypeRegex}");
                         continue;
                     }
                     if (subExpression.Value == "null")
@@ -260,13 +287,13 @@ namespace LocalsJsonDumper
 
             for (int i = 0; i < depth; i++)
             {
-                indentation.Append("\t");
+                indentation.Append("  ");
             }
 
             return indentation.ToString();
         }
 
-        private string GetJsonRepresentationofValue(Expression exp)
+        private string GetJsonRepresentationofValue(Expression2 exp)
         {
             switch (exp.Type.Trim('?'))
             {
