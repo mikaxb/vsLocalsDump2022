@@ -1,9 +1,10 @@
 ﻿using EnvDTE;
+using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.ComponentModel.Design;
-using Task = System.Threading.Tasks.Task;
+using System.Threading.Tasks;
 
 namespace LocalsJsonDumper
 {
@@ -46,8 +47,7 @@ namespace LocalsJsonDumper
             var menuCommandIDc = new CommandID(CommandSet, ContextMenuCommandId);
             var menuItemc = new MenuCommand(ContextMenuExecute, menuCommandIDc);
 
-            commandService.AddCommand(menuItemc);
-            
+            commandService.AddCommand(menuItemc);            
         }
 
         /// <summary>
@@ -62,7 +62,7 @@ namespace LocalsJsonDumper
         /// <summary>
         /// Gets the service provider from the owner package.
         /// </summary>
-        private Microsoft.VisualStudio.Shell.IAsyncServiceProvider ServiceProvider
+        private IAsyncServiceProvider ServiceProvider
         {
             get
             {
@@ -82,12 +82,12 @@ namespace LocalsJsonDumper
 
             OleMenuCommandService commandService = await package.GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
             Instance = new ExportToolWindowCommand(package, commandService);
-            Instance.SetDte();
+            await Instance.SetDteAsync();
         }
 
-        private void SetDte()
+        private async Task SetDteAsync()
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             ToolWindowPane window = this.package.FindToolWindow(typeof(ExportToolWindow), 0, true);
             if ((null == window) || (null == window.Frame))
             {
@@ -95,10 +95,8 @@ namespace LocalsJsonDumper
             }
             var typedWindow = window as ExportToolWindow;
             var windowContent = typedWindow?.Content as ExportToolWindowControl;
-            if (windowContent != null)
-            {
-                windowContent.SetDTE(GetDTE());
-            }
+            var dte = (DTE2)await ServiceProvider.GetServiceAsync(typeof(DTE));
+            windowContent?.SetDTE(dte);
         }
 
         /// <summary>
@@ -127,17 +125,6 @@ namespace LocalsJsonDumper
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             Execute(sender, e);
-        }       
-
-        private DTE GetDTE()
-        {
-            DTE dte = ThreadHelper.JoinableTaskFactory.Run(async delegate
-            {
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                return await ServiceProvider.GetServiceAsync(typeof(DTE)) as DTE;
-
-            });
-            return dte;
-        }
+        }  
     }
 }

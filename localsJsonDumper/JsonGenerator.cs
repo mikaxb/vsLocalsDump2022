@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using EnvDTE;
+using EnvDTE100;
 
 namespace LocalsJsonDumper
 {      
@@ -27,7 +27,7 @@ namespace LocalsJsonDumper
 
         private Regex IgnorePropTypeRegex { get; set; }
 
-        public string GenerateJson(Expression expression, CancellationToken cancellationToken, uint maxDepth, Regex nameIgnoreRegex, Regex typeIgnoreRegex)
+        public string GenerateJson(Expression2 expression, CancellationToken cancellationToken, uint maxDepth, Regex nameIgnoreRegex, Regex typeIgnoreRegex)
         {
             try
             {
@@ -52,7 +52,7 @@ namespace LocalsJsonDumper
             }
         }
 
-        private bool ExpressionIsDictionary(Expression exp)
+        private bool ExpressionIsDictionary(Expression2 exp)
         {
             if (exp.Type.StartsWith("System.Collections.Generic.Dictionary"))
             {
@@ -65,7 +65,7 @@ namespace LocalsJsonDumper
             return false;
         }
 
-        private bool ExpressionIsListOrArray(Expression exp)
+        private bool ExpressionIsListOrArray(Expression2 exp)
         {
             if (exp.Type.StartsWith("System.Collections.Generic.List"))
             {
@@ -90,7 +90,7 @@ namespace LocalsJsonDumper
             return false;
         }
 
-        private bool ExpressionIsValue(Expression exp)
+        private bool ExpressionIsValue(Expression2 exp)
         {
             switch (exp.Type.Trim('?'))
             {
@@ -121,7 +121,7 @@ namespace LocalsJsonDumper
             }
         }
 
-        private bool ExpressionIsEnum(Expression exp)
+        private bool ExpressionIsEnum(Expression2 exp)
         {
             if (exp.DataMembers.Count > 0)
             {
@@ -138,7 +138,7 @@ namespace LocalsJsonDumper
             return true;
         }
 
-        private string GenerateJsonRecurse(Expression currentExpression, uint currentDepth)
+        private string GenerateJsonRecurse(Expression2 currentExpression, uint currentDepth)
         {
             if (currentExpression == null)
             {
@@ -176,7 +176,7 @@ namespace LocalsJsonDumper
                 {
                     return $"{{{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}}}";
                 }
-                foreach (Expression dicSubExpression in currentExpression.DataMembers)
+                foreach (Expression2 dicSubExpression in currentExpression.DataMembers)
                 {
                     if (OperationCancellationToken.IsCancellationRequested)
                     {
@@ -189,7 +189,7 @@ namespace LocalsJsonDumper
                     {
                         string key = null;
                         string value = null;
-                        foreach (Expression dicCollectionExpression in dicSubExpression.DataMembers)
+                        foreach (Expression2 dicCollectionExpression in dicSubExpression.DataMembers)
                         {
                             if (dicCollectionExpression.Name == "Key")
                             {
@@ -216,7 +216,7 @@ namespace LocalsJsonDumper
                 {
                     return $"[{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}]";
                 }
-                foreach (Expression ex in currentExpression.DataMembers)
+                foreach (Expression2 ex in currentExpression.DataMembers)
                 {
                     if (OperationCancellationToken.IsCancellationRequested)
                     {
@@ -238,7 +238,7 @@ namespace LocalsJsonDumper
                 {
                     return $"{{{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}}}";
                 }
-                foreach (Expression subExpression in currentExpression.DataMembers)
+                foreach (Expression2 subExpression in currentExpression.DataMembers)
                 {                   
                     if (OperationCancellationToken.IsCancellationRequested)
                     {
@@ -293,7 +293,7 @@ namespace LocalsJsonDumper
             return indentation.ToString();
         }
 
-        private string GetJsonRepresentationofValue(Expression exp)
+        private string GetJsonRepresentationofValue(Expression2 exp)
         {
             switch (exp.Type.Trim('?'))
             {

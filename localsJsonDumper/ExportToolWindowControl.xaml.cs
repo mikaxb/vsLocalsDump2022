@@ -4,12 +4,12 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Linq;
-using EnvDTE;
-using Expression = EnvDTE.Expression;
+using EnvDTE100;
 using Microsoft.VisualStudio.Shell;
 using System.Threading;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using EnvDTE80;
 
 namespace LocalsJsonDumper
 {
@@ -31,8 +31,8 @@ namespace LocalsJsonDumper
             EngineChoiceBox.SelectedItem = Engines.First(e => e.Generator == EngineGenerator.SystemTextJson);
         }
 
-        private DTE Dte { get; set; }
-        private List<Expression> Locals { get; set; }
+        private DTE2 Dte { get; set; }
+        private List<Expression2> Locals { get; set; }
         private string SelectedLocal { get; set; }
 
         private delegate Task GeneratorDoneCallBack(string generatorResult);
@@ -48,12 +48,12 @@ namespace LocalsJsonDumper
             new EngineListItem() { Generator = EngineGenerator.TreeClimber, Text = "Traverse Expression tree" }
         };
 
-        public void SetDTE(DTE dte)
+        public void SetDTE(DTE2 dte)
         {
             Dte = dte;
         }
 
-        private Expression GetExpressionFromLocals(string localName)
+        private Expression2 GetExpressionFromLocals(string localName)
         {
             return Locals.FirstOrDefault(e =>
             {
@@ -74,7 +74,7 @@ namespace LocalsJsonDumper
                 return;
             }
 
-            var debugger = Dte?.Debugger;
+            var debugger = Dte?.Debugger as Debugger5;
             if (debugger?.CurrentStackFrame is null)
             {
                 TypeInfo.Text = $"CurrentStackFrame is not available. Is the debugger running?";
@@ -82,8 +82,8 @@ namespace LocalsJsonDumper
             }
             var locals = debugger.CurrentStackFrame.Locals;
 
-            var localList = new List<Expression>();
-            foreach (Expression item in locals)
+            var localList = new List<Expression2>();
+            foreach (Expression2 item in locals)
             {
                 localList.Add(item);
             }
@@ -197,7 +197,7 @@ namespace LocalsJsonDumper
             });
         }
 
-        private void GenerateUsingExpressionTree(Expression expression, CancellationToken cancellationToken, uint maxDepth, Regex nameIgnoreRegex, Regex typeIgnoreRegex, GeneratorDoneCallBack callback)
+        private void GenerateUsingExpressionTree(Expression2 expression, CancellationToken cancellationToken, uint maxDepth, Regex nameIgnoreRegex, Regex typeIgnoreRegex, GeneratorDoneCallBack callback)
         {
             _ = Task.Run(async () =>
             {
