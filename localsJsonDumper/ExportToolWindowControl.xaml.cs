@@ -10,6 +10,7 @@ using System.Threading;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using EnvDTE80;
+using EnvDTE;
 
 namespace LocalsJsonDumper
 {
@@ -30,6 +31,8 @@ namespace LocalsJsonDumper
             EngineChoiceBox.SelectionChanged += EngineChanged;
             EngineChoiceBox.SelectedItem = Engines.First(e => e.Generator == EngineGenerator.SystemTextJson);
         }
+
+        private const string WrongThreadMessage = "Not in correct state to execute. Not running on UI thread.";
 
         private DTE2 Dte { get; set; }
         private List<Expression2> Locals { get; set; }
@@ -53,6 +56,45 @@ namespace LocalsJsonDumper
             Dte = dte;
         }
 
+        public void SetSelectionFromDocumentSelection()
+        {
+            try
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+            }
+            catch
+            {
+                DisplayMessage(WrongThreadMessage);
+                return;
+            }
+            Document doc = Dte.ActiveDocument;
+            TextDocument txt = doc.Object() as TextDocument;
+
+            var selection = txt.Selection;
+            var selectedText = selection.Text;
+            if (selection.IsEmpty)
+            {
+                var leftPoint = selection.AnchorPoint.CreateEditPoint();
+                leftPoint.WordLeft(1);
+                var rightPoint = selection.ActivePoint.CreateEditPoint();
+                rightPoint.WordRight(1);
+                selectedText = leftPoint.GetText(rightPoint).Trim();
+            }
+            Debug.WriteLine($"{selectedText} selected via right click");
+            RenewLocalsFromDebugger();
+            PopulateDropDown();
+            var item = LocalDropDown.Items.Cast<string>().FirstOrDefault(i => i == selectedText);
+            if (item != null)
+            {
+                LocalDropDown.SelectedItem = item;
+                Generate();
+            }
+            else
+            {
+                DisplayMessage($"Could not find local with name: {selectedText}");
+            }
+        }
+
         private Expression2 GetExpressionFromLocals(string localName)
         {
             return Locals.FirstOrDefault(e =>
@@ -70,14 +112,14 @@ namespace LocalsJsonDumper
             }
             catch
             {
-                OutPut.Text = $"Not in correct state to execute. Not running on UI thread.";
+                DisplayMessage(WrongThreadMessage);
                 return;
             }
 
             var debugger = Dte?.Debugger as Debugger5;
             if (debugger?.CurrentStackFrame is null)
             {
-                TypeInfo.Text = $"CurrentStackFrame is not available. Is the debugger running?";
+                DisplayMessage($"CurrentStackFrame is not available. Is the debugger running?");
                 return;
             }
             var locals = debugger.CurrentStackFrame.Locals;
@@ -90,7 +132,7 @@ namespace LocalsJsonDumper
             Locals = localList;
         }
 
-        private void LocalDropDown_OnClose(object sender, EventArgs e)
+        private void LocalDropDown_OnChanged(object sender, EventArgs e)
         {
             try
             {
@@ -98,7 +140,7 @@ namespace LocalsJsonDumper
             }
             catch
             {
-                OutPut.Text = $"Not in correct state to execute. Not running on UI thread.";
+                DisplayMessage(WrongThreadMessage);
                 return;
             }
             try
@@ -108,6 +150,7 @@ namespace LocalsJsonDumper
                 {
                     SelectedLocal = dropDown.SelectedValue.ToString();
                     TypeInfo.Text = GetExpressionFromLocals(SelectedLocal)?.Type;
+                    Debug.WriteLine($"{SelectedLocal} of type {TypeInfo.Text} selected");
                 }
             }
             catch (Exception ex)
@@ -124,11 +167,37 @@ namespace LocalsJsonDumper
             }
             catch
             {
-                OutPut.Text = $"Not in correct state to execute. Not running on UI thread.";
+                DisplayMessage(WrongThreadMessage);
                 return;
             }
             RenewLocalsFromDebugger();
             PopulateDropDown();
+        }
+        private void Generate()
+        {
+            if (string.IsNullOrEmpty(SelectedLocal))
+            {
+                DisplayMessage("Could not evaluate Expression. Check that a known type is selected.");
+                return;
+            }
+
+            OutPut.Text = "<< GENERATING >>";
+            OutPut.TextAlignment = TextAlignment.Center;
+            CopyButton.IsEnabled = false;
+            GenerateButton.IsEnabled = false;
+            CancelButton.IsEnabled = !UseSystemTextJson;
+
+            if (ValidateAndParseInput(MaxDepthInput.Text, out var maxDepth) && ValidateAndParseInput(TimeoutInput.Text, out var timeout))
+            {
+                Generate(SelectedLocal, TimeSpan.FromSeconds(timeout), maxDepth, new Regex(NameIgnoreRegexInput.Text), new Regex(TypeIgnoreRegexInput.Text), IncludeFields.IsChecked ?? false);
+            }
+            else
+            {
+                CopyButton.IsEnabled = true;
+                GenerateButton.IsEnabled = true;
+                CancelButton.IsEnabled = false;
+                DisplayMessage("Invalid input. Use unsigned integers.");
+            }
         }
 
         private void Generate(string localName, TimeSpan timeout, uint maxDepth, Regex nameIgnoreRegex, Regex typeIgnoreRegex, bool includeFields)
@@ -139,14 +208,14 @@ namespace LocalsJsonDumper
             }
             catch
             {
-                OutPut.Text = $"Not in correct state to execute. Not running on UI thread.";
+                DisplayMessage(WrongThreadMessage);
                 return;
             }
             RenewLocalsFromDebugger();
             var expression = GetExpressionFromLocals(localName);
             if (expression is null)
             {
-                OutPut.Text = $"Could not find local with name: {localName}";
+                DisplayMessage($"Could not find local with name: {localName}");
                 return;
             }
 
@@ -263,31 +332,7 @@ namespace LocalsJsonDumper
 
         private void GenerateButtonClick(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(SelectedLocal))
-            {
-                OutPut.Text = "< Could not evaluate Expression. Check that a known type is selected. >";
-                OutPut.TextAlignment = TextAlignment.Center;
-                return;
-            }
-
-            OutPut.Text = "<< GENERATING >>";
-            OutPut.TextAlignment = TextAlignment.Center;
-            CopyButton.IsEnabled = false;
-            GenerateButton.IsEnabled = false;
-            CancelButton.IsEnabled = !UseSystemTextJson;
-
-            if (ValidateAndParseInput(MaxDepthInput.Text, out var maxDepth) && ValidateAndParseInput(TimeoutInput.Text, out var timeout))
-            {
-                Generate(SelectedLocal, TimeSpan.FromSeconds(timeout), maxDepth, new Regex(NameIgnoreRegexInput.Text), new Regex(TypeIgnoreRegexInput.Text), IncludeFields.IsChecked ?? false);
-            }
-            else
-            {
-                CopyButton.IsEnabled = true;
-                GenerateButton.IsEnabled = true;
-                CancelButton.IsEnabled = false;
-                OutPut.Text = "< Invalid input. Use unsigned integers. >";
-                OutPut.TextAlignment = TextAlignment.Center;
-            }
+            Generate();
         }
 
         private void CancelButtonClick(object sender, RoutedEventArgs e)
@@ -309,6 +354,12 @@ namespace LocalsJsonDumper
         private void CopyToClipBoardButtonClick(object sender, RoutedEventArgs e)
         {
             Clipboard.SetText(OutPut.Text);
+        }
+
+        private void DisplayMessage(string message)
+        {
+            OutPut.Text = Environment.NewLine + message;
+            OutPut.TextAlignment = TextAlignment.Center;
         }
 
         private void EngineChanged(object sender, RoutedEventArgs e)
