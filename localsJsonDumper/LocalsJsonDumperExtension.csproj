@@ -45,10 +45,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="DumpObjectCommandPackage.cs" />
-    <Compile Include="ExportDialog.xaml.cs">
-      <DependentUpon>ExportDialog.xaml</DependentUpon>
-    </Compile>
+    <Compile Include="DumpObjectCommandPackage.cs" />   
     <Compile Include="ExportToolWindow.cs" />
     <Compile Include="ExportToolWindowCommand.cs" />
     <Compile Include="ExportToolWindowControl.xaml.cs">
@@ -86,11 +83,7 @@
     </PackageReference>
     <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.7.2192" />
   </ItemGroup>
-  <ItemGroup>
-    <Page Include="ExportDialog.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
+  <ItemGroup>   
     <Page Include="ExportToolWindowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
