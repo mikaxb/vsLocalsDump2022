@@ -247,7 +247,7 @@ namespace LocalsJsonDumper
                     {
                         var unescapedAndTrimmedValue = Regex.Unescape(jsonExpression.Value).Trim('"');
                         var reDeserializedObject = System.Text.Json.JsonSerializer.Deserialize<object>(unescapedAndTrimmedValue);
-                        result = System.Text.Json.JsonSerializer.Serialize(reDeserializedObject, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                        result = System.Text.Json.JsonSerializer.Serialize(reDeserializedObject, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }).Replace("\\u002B", "+");
                     }
                     else
                     {
