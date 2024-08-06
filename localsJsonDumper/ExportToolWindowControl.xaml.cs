@@ -48,7 +48,7 @@ namespace LocalsJsonDumper
 
         private List<EngineListItem> Engines { get; } = new List<EngineListItem>() {
             new EngineListItem() { Generator = EngineGenerator.SystemTextJson, Text = "GetExpression with C# System.Text.Json" },
-            new EngineListItem() { Generator = EngineGenerator.TreeClimber, Text = "Traverse Expression tree" }
+            new EngineListItem() { Generator = EngineGenerator.TreeClimber, Text = "Traverse debugger expression tree" }
         };
 
         public void SetDTE(DTE2 dte)
@@ -275,8 +275,7 @@ namespace LocalsJsonDumper
                 {
                     Debug.WriteLine("Generation starting");
                     var generator = new JsonGenerator();
-                    var json = generator.GenerateJson(expression, cancellationToken, maxDepth, nameIgnoreRegex, typeIgnoreRegex);
-                    result = json;
+                    result = generator.GenerateJson(expression, cancellationToken, maxDepth, nameIgnoreRegex, typeIgnoreRegex);
                 }
                 catch (Exception ex)
                 {
