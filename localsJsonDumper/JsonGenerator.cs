@@ -15,7 +15,7 @@ namespace LocalsJsonDumper
             
         }
 
-        private const string _tokenCancelledMessage = "< Operation cancelled >";
+        private const string _tokenCancelledMessage = "<Operation cancelled>";
 
         private Regex PartOfCollection { get; } = new Regex(@"\[\d+\]");
 
@@ -142,7 +142,7 @@ namespace LocalsJsonDumper
         {
             if (currentExpression == null)
             {
-                return $"< Could not evaluate Expression. Check that a known type is selected. >";
+                return $"<Could not evaluate Expression. Check that a known type is selected>";
             }
 
             Debug.WriteLine($"Depth: {currentDepth}. {currentExpression.Name} {currentExpression.Type}:{currentExpression.Value}");

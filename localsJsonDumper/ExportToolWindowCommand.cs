@@ -41,7 +41,7 @@ namespace LocalsJsonDumper
             commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
 
             var menuCommandID = new CommandID(CommandSet, CommandId);
-            var menuItem = new MenuCommand(Execute, menuCommandID);
+            var menuItem = new MenuCommand(ShowToolWindow, menuCommandID);
             commandService.AddCommand(menuItem);
 
             var menuCommandIDc = new CommandID(CommandSet, ContextMenuCommandId);
@@ -86,14 +86,8 @@ namespace LocalsJsonDumper
         }
 
         private async Task SetDteAsync()
-        {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            ToolWindowPane window = this.package.FindToolWindow(typeof(ExportToolWindow), 0, true);
-            if ((null == window) || (null == window.Frame))
-            {
-                throw new NotSupportedException("Cannot create tool window");
-            }
-            var typedWindow = window as ExportToolWindow;
+        {          
+            var typedWindow = GetExportToolWindow();
             var windowContent = typedWindow?.Content as ExportToolWindowControl;
             var dte = (DTE2)await ServiceProvider.GetServiceAsync(typeof(DTE));
             windowContent?.SetDTE(dte);
@@ -104,27 +98,32 @@ namespace LocalsJsonDumper
         /// </summary>
         /// <param name="sender">The event sender.</param>
         /// <param name="e">The event args.</param>
-        private void Execute(object sender, EventArgs e)
+        private void ShowToolWindow(object sender, EventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-
-            // Get the instance number 0 of this tool window. This window is single instance so this instance
-            // is actually the only one.
-            // The last flag is set to true so that if the tool window does not exists it will be created.
-            ToolWindowPane window = this.package.FindToolWindow(typeof(ExportToolWindow), 0, true);
-            if ((null == window) || (null == window.Frame))
-            {
-                throw new NotSupportedException("Cannot create tool window");
-            }
-
-            IVsWindowFrame windowFrame = (IVsWindowFrame)window.Frame;
+            IVsWindowFrame windowFrame = (IVsWindowFrame)GetExportToolWindow().Frame;
             Microsoft.VisualStudio.ErrorHandler.ThrowOnFailure(windowFrame.Show());
         }
 
         private void ContextMenuExecute(object sender, EventArgs e)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            Execute(sender, e);
+            var typedWindow = GetExportToolWindow();
+            var windowContent = typedWindow?.Content as ExportToolWindowControl;
+            windowContent?.SetSelectionFromDocumentSelection();
+            ShowToolWindow(sender, e);
         }  
+
+        private ExportToolWindow GetExportToolWindow()
+        {
+            // Get the instance number 0 of this tool window. This window is single instance so this instance
+            // is actually the only one.
+            // The last flag is set to true so that if the tool window does not exists it will be created.
+            ToolWindowPane window = this.package.FindToolWindow(typeof(ExportToolWindow), 0, true);
+            if ((window== null) || (window.Frame == null))
+            {
+                throw new NotSupportedException("Cannot find tool window");
+            }
+            return window as ExportToolWindow;
+        }
     }
 }
