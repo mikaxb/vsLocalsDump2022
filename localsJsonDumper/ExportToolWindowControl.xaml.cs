@@ -35,7 +35,9 @@ namespace LocalsJsonDumper
         private const string WrongThreadMessage = "Not in correct state to execute. Not running on UI thread.";
 
         private DTE2 Dte { get; set; }
+
         private List<Expression2> Locals { get; set; }
+
         private string SelectedLocal { get; set; }
 
         private delegate Task GeneratorDoneCallBack(string generatorResult);
