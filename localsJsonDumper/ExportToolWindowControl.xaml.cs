@@ -221,7 +221,7 @@ namespace LocalsJsonDumper
 
             if (UseSystemTextJson)
             {
-                GenerateUsingSystemTextJson(localName, includeFields, maxDepth, HandleGeneratorResultAsync);
+                GenerateUsingSystemTextJson(localName, includeFields, HandleGeneratorResultAsync);
             }
             else
             {
@@ -233,7 +233,7 @@ namespace LocalsJsonDumper
             }
         }
 
-        private void GenerateUsingSystemTextJson(string localName, bool includeFields, uint maxDepth, GeneratorDoneCallBack callback)
+        private void GenerateUsingSystemTextJson(string localName, bool includeFields, GeneratorDoneCallBack callback)
         {
             _ = Task.Run(async () =>
             {
