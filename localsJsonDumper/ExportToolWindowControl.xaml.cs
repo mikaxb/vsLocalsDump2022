@@ -173,6 +173,7 @@ namespace LocalsJsonDumper
             RenewLocalsFromDebugger();
             PopulateDropDown();
         }
+
         private void Generate()
         {
             if (string.IsNullOrEmpty(SelectedLocal))
