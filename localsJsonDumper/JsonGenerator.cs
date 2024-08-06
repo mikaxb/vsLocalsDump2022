@@ -62,24 +62,36 @@ namespace LocalsJsonDumper
             {
                 return true;
             }
+            if (exp.Type.StartsWith("System.Collections.Generic.SortedDictionary"))
+            {
+                return true;
+            }
+            if (exp.Type.StartsWith("System.Collections.Concurrent.ConcurrentDictionary"))
+            {
+                return true;
+            }
+            if (exp.Type.StartsWith("System.Collections.Generic.SortedList"))
+            {
+                return true;
+            }
+            if (exp.Type.StartsWith("System.Collections.SortedList"))
+            {
+                return true;
+            }
+            if (exp.Type.StartsWith("System.Collections.Immutable.ImmutableSortedDictionary"))
+            {
+                return true;
+            }
+            if (exp.Type.StartsWith("System.Collections.Immutable.ImmutableDictionary"))
+            {
+                return true;
+            }
             return false;
         }
 
-        private bool ExpressionIsListOrArray(Expression2 exp)
+        private bool ExpressionIsCollectionOrArray(Expression2 exp)
         {
-            if (exp.Type.StartsWith("System.Collections.Generic.List"))
-            {
-                return true;
-            }
-            if (exp.Type.StartsWith("System.Collections.Generic.ICollection"))
-            {
-                return true;
-            }
-            if (exp.Type.StartsWith("System.Collections.Generic.IList"))
-            {
-                return true;
-            }
-            if (exp.Type.StartsWith("System.Collections.Generic.IEnumerable"))
+            if (exp.Type.StartsWith("System.Collections"))
             {
                 return true;
             }
@@ -209,7 +221,7 @@ namespace LocalsJsonDumper
                 }
                 return DictionaryReturn();
             }
-            else if (ExpressionIsListOrArray(currentExpression))
+            else if (ExpressionIsCollectionOrArray(currentExpression))
             {
                 var values = new List<string>();
                 string ListReturn()
