@@ -171,7 +171,7 @@ namespace LocalsJsonDumper
             }
             else if(ExpressionIsValue(currentExpression))
             {
-                return $"{GetJsonRepresentationofValue(currentExpression)}";
+                return $"{GetJsonRepresentationOfValue(currentExpression)}";
             }
             else if (ExpressionIsEnum(currentExpression))
             {
@@ -305,7 +305,7 @@ namespace LocalsJsonDumper
             return indentation.ToString();
         }
 
-        private string GetJsonRepresentationofValue(Expression2 exp)
+        private string GetJsonRepresentationOfValue(Expression2 exp)
         {
             switch (exp.Type.Trim('?'))
             {
@@ -318,6 +318,8 @@ namespace LocalsJsonDumper
                 case "string":
                 case "int":
                 case "uint":
+                case "nint":
+                case "nuint":
                 case "bool":
                 case "double":
                 case "float":
