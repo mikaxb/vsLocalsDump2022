@@ -55,7 +55,7 @@ namespace LocalsJsonDumper
 
         public void SetDTE(DTE2 dte)
         {
-            Dte = dte;
+            Dte = dte;           
         }
 
         public void SetSelectionFromDocumentSelection()
@@ -108,23 +108,14 @@ namespace LocalsJsonDumper
 
         private void RenewLocalsFromDebugger()
         {
-            try
+            var stackFrame = GetCurrentStackFrame();
+
+            if (stackFrame is null)
             {
-                ThreadHelper.ThrowIfNotOnUIThread();
-            }
-            catch
-            {
-                DisplayMessage(WrongThreadMessage);
                 return;
             }
 
-            var debugger = Dte?.Debugger as Debugger5;
-            if (debugger?.CurrentStackFrame is null)
-            {
-                DisplayMessage($"CurrentStackFrame is not available. Is the debugger running?");
-                return;
-            }
-            var locals = debugger.CurrentStackFrame.Locals;
+            var locals = stackFrame.Locals;
 
             var localList = new List<Expression2>();
             foreach (Expression2 item in locals)
@@ -178,6 +169,22 @@ namespace LocalsJsonDumper
 
         private void Generate()
         {
+            var stackFrame = GetCurrentStackFrame();
+
+            if (stackFrame is null)
+            {
+                return;
+            }
+
+            var language = stackFrame.Language;
+            
+            if(language != "C#" && UseSystemTextJson)
+            {
+                DisplayMessage($"Cannot use System.Text.Json.JsonSerializer with current language: {language}");
+                return;
+            }
+
+          
             if (string.IsNullOrEmpty(SelectedLocal))
             {
                 DisplayMessage("Could not evaluate Expression. Check that a known type is selected.");
@@ -378,6 +385,28 @@ namespace LocalsJsonDumper
                 TreeClimberControls.Visibility = Visibility.Visible;               
                 RegexControls.Visibility = Visibility.Visible;
             }
+        }
+
+        private EnvDTE.StackFrame GetCurrentStackFrame()
+        {
+            try
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+            }
+            catch
+            {
+                DisplayMessage(WrongThreadMessage);
+                return null;
+            }
+
+            var debugger = Dte?.Debugger as Debugger5;
+            if (debugger?.CurrentStackFrame is null)
+            {
+                DisplayMessage($"CurrentStackFrame is not available. Is the debugger running?");
+                return null;
+            }
+
+            return debugger.CurrentStackFrame;
         }
 
         private enum EngineGenerator
