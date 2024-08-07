@@ -197,17 +197,36 @@ namespace LocalsJsonDumper
             GenerateButton.IsEnabled = false;
             CancelButton.IsEnabled = !UseSystemTextJson;
 
-            if (ValidateAndParseInput(MaxDepthInput.Text, out var maxDepth) && ValidateAndParseInput(TimeoutInput.Text, out var timeout))
+            Regex nameIgnoreRegex;
+            Regex typeIgnoreRegex;
+            try
             {
-                Generate(SelectedLocal, TimeSpan.FromSeconds(timeout), maxDepth, new Regex(NameIgnoreRegexInput.Text), new Regex(TypeIgnoreRegexInput.Text), IncludeFields.IsChecked ?? false);
+                nameIgnoreRegex = new Regex(NameIgnoreRegexInput.Text);
+                typeIgnoreRegex = new Regex(TypeIgnoreRegexInput.Text);
             }
-            else
+            catch(Exception ex)
+            {
+                CopyButton.IsEnabled = true;
+                GenerateButton.IsEnabled = true;
+                CancelButton.IsEnabled = false;
+                DisplayMessage($"Invalid regex.{Environment.NewLine}{ex.Message}");
+                return;
+            }
+
+            
+            var intInputValid = ValidateAndParseInput(MaxDepthInput.Text, out var maxDepth);
+            intInputValid = ValidateAndParseInput(TimeoutInput.Text, out var timeout) && intInputValid;
+
+            if (!intInputValid)
             {
                 CopyButton.IsEnabled = true;
                 GenerateButton.IsEnabled = true;
                 CancelButton.IsEnabled = false;
                 DisplayMessage("Invalid input. Use unsigned integers.");
+                return;
             }
+
+            Generate(SelectedLocal, TimeSpan.FromSeconds(timeout), maxDepth, nameIgnoreRegex, typeIgnoreRegex, IncludeFields.IsChecked ?? false);
         }
 
         private void Generate(string localName, TimeSpan timeout, uint maxDepth, Regex nameIgnoreRegex, Regex typeIgnoreRegex, bool includeFields)
