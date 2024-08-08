@@ -280,7 +280,7 @@ namespace LocalsJsonDumper
                     }
                     else
                     {
-                        result = jsonExpression.Value;
+                        result = $"System.Text.Json.JsonSerializer.Serialize did not produce a valid value.{Environment.NewLine}{jsonExpression.Value}";
                     }
                 }
                 catch (Exception ex)
