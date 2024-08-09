@@ -1,18 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using EnvDTE100;
 
 namespace LocalsJsonDumper
-{      
+{
     internal class JsonGenerator
     {
         public JsonGenerator()
         {
-            
+
         }
 
         private const string _tokenCancelledMessage = "<Operation cancelled>";
@@ -165,11 +166,11 @@ namespace LocalsJsonDumper
                 return _tokenCancelledMessage;
             }
 
-            if(currentExpression.Value == "null")
+            if (currentExpression.Value == "null")
             {
                 return "null";
             }
-            else if(ExpressionIsValue(currentExpression))
+            else if (ExpressionIsValue(currentExpression))
             {
                 return $"{GetJsonRepresentationOfValue(currentExpression)}";
             }
@@ -251,7 +252,7 @@ namespace LocalsJsonDumper
                     return $"{{{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}}}";
                 }
                 foreach (Expression2 subExpression in currentExpression.DataMembers)
-                {                   
+                {
                     if (OperationCancellationToken.IsCancellationRequested)
                     {
                         Debug.WriteLine(_tokenCancelledMessage);
@@ -309,12 +310,13 @@ namespace LocalsJsonDumper
         {
             switch (exp.Type.Trim('?'))
             {
-                case "System.Guid":
                 case "System.DateTime":
-                case "System.TimeSpan":
+                    return HandleDatetime(exp);
                 case "System.DateTimeOffset":
+                    return HandleDatetimeOffset(exp);
+                case "System.Guid":
+                case "System.TimeSpan":
                     return $"\"{exp.Value.Replace("{", "").Replace("}", "")}\"";
-
                 case "string":
                 case "int":
                 case "uint":
@@ -331,12 +333,77 @@ namespace LocalsJsonDumper
                 case "short":
                 case "ushort":
                     return exp.Value;
-
                 case "char":
                     return $"\"{exp.Value.Substring(exp.Value.IndexOf("'") + 1, 1)}\"";
 
                 default:
                     return $" <UNHANDLED TYPE: {exp.Type}>";
+            }
+        }
+
+        private string HandleDatetime(Expression2 exp)
+        {
+            try
+            {
+                var subExpressions = new List<Expression2>();
+                foreach (Expression2 subExpression in exp.DataMembers)
+                {
+                    subExpressions.Add(subExpression);
+                }
+
+                int year = int.Parse(subExpressions.First(e => e.Name == nameof(DateTime.Year)).Value);
+                int month = int.Parse(subExpressions.First(e => e.Name == nameof(DateTime.Month)).Value);
+                int day = int.Parse(subExpressions.First(e => e.Name == nameof(DateTime.Day)).Value);
+                int hour = int.Parse(subExpressions.First(e => e.Name == nameof(DateTime.Hour)).Value);
+                int minute = int.Parse(subExpressions.First(e => e.Name == nameof(DateTime.Minute)).Value);
+                int second = int.Parse(subExpressions.First(e => e.Name == nameof(DateTime.Second)).Value);
+                int millisecond = int.Parse(subExpressions.First(e => e.Name == nameof(DateTime.Millisecond)).Value);
+
+                var dt = new DateTime(year, month, day, hour, minute, second, millisecond);
+                return dt.ToString("yyyy-MM-ddTHH:mm:ss.fff");
+            }
+            catch
+            {
+                return $"\"{exp.Value.Replace("{", "").Replace("}", "")}\"";
+            }
+        }
+
+        private string HandleDatetimeOffset(Expression2 exp)
+        {
+            try
+            {
+                var subExpressions = new List<Expression2>();
+                foreach (Expression2 subExpression in exp.DataMembers)
+                {
+                    subExpressions.Add(subExpression);
+                }
+
+                int year = int.Parse(subExpressions.First(e => e.Name == nameof(DateTimeOffset.Year)).Value);
+                int month = int.Parse(subExpressions.First(e => e.Name == nameof(DateTimeOffset.Month)).Value);
+                int day = int.Parse(subExpressions.First(e => e.Name == nameof(DateTimeOffset.Day)).Value);
+                int hour = int.Parse(subExpressions.First(e => e.Name == nameof(DateTimeOffset.Hour)).Value);
+                int minute = int.Parse(subExpressions.First(e => e.Name == nameof(DateTimeOffset.Minute)).Value);
+                int second = int.Parse(subExpressions.First(e => e.Name == nameof(DateTimeOffset.Second)).Value);
+                int millisecond = int.Parse(subExpressions.First(e => e.Name == nameof(DateTimeOffset.Millisecond)).Value);
+
+                var offsetExpressions = new List<Expression2>();
+                foreach (Expression2 subExpression in subExpressions.First(e => e.Name == nameof(DateTimeOffset.Offset)).DataMembers)
+                {
+                    offsetExpressions.Add(subExpression);
+                }
+                int dayOffset = int.Parse(offsetExpressions.First(e => e.Name == nameof(TimeSpan.Days)).Value);
+                int hourOffset = int.Parse(offsetExpressions.First(e => e.Name == nameof(TimeSpan.Hours)).Value);
+                int minuteOffset = int.Parse(offsetExpressions.First(e => e.Name == nameof(TimeSpan.Minutes)).Value);
+                int secondOffset = int.Parse(offsetExpressions.First(e => e.Name == nameof(TimeSpan.Seconds)).Value);
+                int millisecondOffset = int.Parse(offsetExpressions.First(e => e.Name == nameof(TimeSpan.Milliseconds)).Value);
+
+                var offset = new TimeSpan(dayOffset, hourOffset, minuteOffset, secondOffset, millisecondOffset);
+                var dto = new DateTimeOffset(year, month, day, hour, minute, second, millisecond, offset);
+                return dto.ToString("yyyy-MM-ddTHH:mm:ss.fffzzz");
+            }
+            catch
+            {
+                return $"\"{exp.Value.Replace("{", "").Replace("}", "")}\"";
             }
         }
     }
