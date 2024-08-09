@@ -11,8 +11,8 @@ The following output:
 ```
 {
   "BProp": 56,
-  "DateTimeOffsetProperty": 2024-08-09T19:37:37.560+02:00,
-  "DateTimeProperty": 2024-08-09T14:37:37.557,
+  "DateTimeOffsetProperty": "2024-08-09T19:37:37.560+02:00",
+  "DateTimeProperty": "2024-08-09T14:37:37.557",
   "DoubleProperty": 5.69,
   "EnumProp": "Three",
   "FloatProperty": 5.6,
