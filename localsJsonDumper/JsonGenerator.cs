@@ -373,9 +373,9 @@ namespace LocalsJsonDumper
             try
             {
                 var subExpressions = new List<Expression2>();
-                foreach (Expression2 subExpression in exp.DataMembers)
+                foreach (Expression2 expression in exp.DataMembers)
                 {
-                    subExpressions.Add(subExpression);
+                    subExpressions.Add(expression);
                 }
 
                 int year = int.Parse(subExpressions.First(e => e.Name == nameof(DateTimeOffset.Year)).Value);
@@ -387,9 +387,9 @@ namespace LocalsJsonDumper
                 int millisecond = int.Parse(subExpressions.First(e => e.Name == nameof(DateTimeOffset.Millisecond)).Value);
 
                 var offsetExpressions = new List<Expression2>();
-                foreach (Expression2 subExpression in subExpressions.First(e => e.Name == nameof(DateTimeOffset.Offset)).DataMembers)
+                foreach (Expression2 expression in subExpressions.First(e => e.Name == nameof(DateTimeOffset.Offset)).DataMembers)
                 {
-                    offsetExpressions.Add(subExpression);
+                    offsetExpressions.Add(expression);
                 }
                 int dayOffset = int.Parse(offsetExpressions.First(e => e.Name == nameof(TimeSpan.Days)).Value);
                 int hourOffset = int.Parse(offsetExpressions.First(e => e.Name == nameof(TimeSpan.Hours)).Value);
