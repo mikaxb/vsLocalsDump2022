@@ -154,7 +154,7 @@ namespace LocalsJsonDumper
         {
             if (currentExpression == null)
             {
-                return $"<Could not evaluate Expression. Check that a known type is selected>";
+                return $"<Could not evaluate Expression>";
             }
 
             Debug.WriteLine($"Depth: {currentDepth}. {currentExpression.Name} {currentExpression.Type}:{currentExpression.Value}");
