@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="localsJsonDumper.88f5e98f-d0bf-44b3-93ce-92592d682562" Version="2.1.0" Language="en-US" Publisher="Mikael Axblom" />
+        <Identity Id="localsJsonDumper.88f5e98f-d0bf-44b3-93ce-92592d682562" Version="2.1.1" Language="en-US" Publisher="Mikael Axblom" />
         <DisplayName>Local variable JSON dumper</DisplayName>
         <Description xml:space="preserve">Adds an option to view a variable from locals in the debugger as JSON.</Description>
         <MoreInfo>https://github.com/mikaxb/vsLocalsDump2022</MoreInfo>
