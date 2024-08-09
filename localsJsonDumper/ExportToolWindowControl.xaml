@@ -19,7 +19,7 @@
         <StackPanel Orientation="Horizontal" Margin="10,0,0,0" Grid.Row="0"  VerticalAlignment="Center" >
             <Button Content="Generate" Name="GenerateButton" HorizontalAlignment="Left" Padding="0,2,0,2" VerticalAlignment="Center" Width="114" Click="GenerateButtonClick"/>
             <ComboBox  HorizontalAlignment="Left"  Margin="20,0,0,0" VerticalAlignment="Center" Width="250" Name="LocalDropDown" DropDownOpened="LocalDropDown_OnOpen" SelectionChanged="LocalDropDown_OnChanged"/>
-            <TextBlock HorizontalAlignment="Left" Margin="6,0,0,0" TextWrapping="Wrap" Text="Unknown type" VerticalAlignment="Center"  Name="TypeInfo" MinWidth="150" Width="auto"/>            
+            <TextBlock HorizontalAlignment="Left" Margin="6,0,0,0" TextWrapping="Wrap" Text="⇦ Select variable" VerticalAlignment="Center"  Name="TypeInfo" MinWidth="150" Width="auto"/>            
         </StackPanel>
         <Button Content="Cancel" Name="CancelButton" Padding="0,2,0,2" HorizontalAlignment="Right" Margin="0,0,10,0" VerticalAlignment="Center" Width="114" Click="CancelButtonClick" IsEnabled="False"  Grid.Row="0"/>
         

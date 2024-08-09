@@ -35,7 +35,9 @@ namespace LocalsJsonDumper
         private const string WrongThreadMessage = "Not in correct state to execute. Not running on UI thread.";
 
         private DTE2 Dte { get; set; }
+
         private List<Expression2> Locals { get; set; }
+
         private string SelectedLocal { get; set; }
 
         private delegate Task GeneratorDoneCallBack(string generatorResult);
@@ -48,12 +50,12 @@ namespace LocalsJsonDumper
 
         private List<EngineListItem> Engines { get; } = new List<EngineListItem>() {
             new EngineListItem() { Generator = EngineGenerator.SystemTextJson, Text = "GetExpression with C# System.Text.Json" },
-            new EngineListItem() { Generator = EngineGenerator.TreeClimber, Text = "Traverse Expression tree" }
+            new EngineListItem() { Generator = EngineGenerator.TreeClimber, Text = "Traverse debugger expression tree" }
         };
 
         public void SetDTE(DTE2 dte)
         {
-            Dte = dte;
+            Dte = dte;           
         }
 
         public void SetSelectionFromDocumentSelection()
@@ -104,25 +106,17 @@ namespace LocalsJsonDumper
             });
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "Done in GetCurrentStackFrame")]
         private void RenewLocalsFromDebugger()
         {
-            try
+            var stackFrame = GetCurrentStackFrame();
+
+            if (stackFrame is null)
             {
-                ThreadHelper.ThrowIfNotOnUIThread();
-            }
-            catch
-            {
-                DisplayMessage(WrongThreadMessage);
                 return;
             }
 
-            var debugger = Dte?.Debugger as Debugger5;
-            if (debugger?.CurrentStackFrame is null)
-            {
-                DisplayMessage($"CurrentStackFrame is not available. Is the debugger running?");
-                return;
-            }
-            var locals = debugger.CurrentStackFrame.Locals;
+            var locals = stackFrame.Locals;
 
             var localList = new List<Expression2>();
             foreach (Expression2 item in locals)
@@ -173,8 +167,26 @@ namespace LocalsJsonDumper
             RenewLocalsFromDebugger();
             PopulateDropDown();
         }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "Done in GetCurrentStackFrame")]
         private void Generate()
         {
+            var stackFrame = GetCurrentStackFrame();
+
+            if (stackFrame is null)
+            {
+                return;
+            }
+
+            var language = stackFrame.Language;
+            
+            if(language != "C#" && UseSystemTextJson)
+            {
+                DisplayMessage($"Cannot use System.Text.Json.JsonSerializer with current language: {language}");
+                return;
+            }
+
+          
             if (string.IsNullOrEmpty(SelectedLocal))
             {
                 DisplayMessage("Could not evaluate Expression. Check that a known type is selected.");
@@ -187,17 +199,36 @@ namespace LocalsJsonDumper
             GenerateButton.IsEnabled = false;
             CancelButton.IsEnabled = !UseSystemTextJson;
 
-            if (ValidateAndParseInput(MaxDepthInput.Text, out var maxDepth) && ValidateAndParseInput(TimeoutInput.Text, out var timeout))
+            Regex nameIgnoreRegex;
+            Regex typeIgnoreRegex;
+            try
             {
-                Generate(SelectedLocal, TimeSpan.FromSeconds(timeout), maxDepth, new Regex(NameIgnoreRegexInput.Text), new Regex(TypeIgnoreRegexInput.Text), IncludeFields.IsChecked ?? false);
+                nameIgnoreRegex = new Regex(NameIgnoreRegexInput.Text);
+                typeIgnoreRegex = new Regex(TypeIgnoreRegexInput.Text);
             }
-            else
+            catch(Exception ex)
+            {
+                CopyButton.IsEnabled = true;
+                GenerateButton.IsEnabled = true;
+                CancelButton.IsEnabled = false;
+                DisplayMessage($"Invalid regex.{Environment.NewLine}{ex.Message}");
+                return;
+            }
+
+            
+            var intInputValid = ValidateAndParseInput(MaxDepthInput.Text, out var maxDepth);
+            intInputValid = ValidateAndParseInput(TimeoutInput.Text, out var timeout) && intInputValid;
+
+            if (!intInputValid)
             {
                 CopyButton.IsEnabled = true;
                 GenerateButton.IsEnabled = true;
                 CancelButton.IsEnabled = false;
                 DisplayMessage("Invalid input. Use unsigned integers.");
+                return;
             }
+
+            Generate(SelectedLocal, TimeSpan.FromSeconds(timeout), maxDepth, nameIgnoreRegex, typeIgnoreRegex, IncludeFields.IsChecked ?? false);
         }
 
         private void Generate(string localName, TimeSpan timeout, uint maxDepth, Regex nameIgnoreRegex, Regex typeIgnoreRegex, bool includeFields)
@@ -221,7 +252,7 @@ namespace LocalsJsonDumper
 
             if (UseSystemTextJson)
             {
-                GenerateUsingSystemTextJson(localName, includeFields, maxDepth, HandleGeneratorResultAsync);
+                GenerateUsingSystemTextJson(localName, includeFields, HandleGeneratorResultAsync);
             }
             else
             {
@@ -233,7 +264,7 @@ namespace LocalsJsonDumper
             }
         }
 
-        private void GenerateUsingSystemTextJson(string localName, bool includeFields, uint maxDepth, GeneratorDoneCallBack callback)
+        private void GenerateUsingSystemTextJson(string localName, bool includeFields, GeneratorDoneCallBack callback)
         {
             _ = Task.Run(async () =>
             {
@@ -251,7 +282,7 @@ namespace LocalsJsonDumper
                     }
                     else
                     {
-                        result = jsonExpression.Value;
+                        result = $"System.Text.Json.JsonSerializer.Serialize did not produce a valid value.{Environment.NewLine}{jsonExpression.Value}";
                     }
                 }
                 catch (Exception ex)
@@ -275,8 +306,7 @@ namespace LocalsJsonDumper
                 {
                     Debug.WriteLine("Generation starting");
                     var generator = new JsonGenerator();
-                    var json = generator.GenerateJson(expression, cancellationToken, maxDepth, nameIgnoreRegex, typeIgnoreRegex);
-                    result = json;
+                    result = generator.GenerateJson(expression, cancellationToken, maxDepth, nameIgnoreRegex, typeIgnoreRegex);
                 }
                 catch (Exception ex)
                 {
@@ -376,6 +406,28 @@ namespace LocalsJsonDumper
                 TreeClimberControls.Visibility = Visibility.Visible;               
                 RegexControls.Visibility = Visibility.Visible;
             }
+        }
+
+        private EnvDTE.StackFrame GetCurrentStackFrame()
+        {
+            try
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+            }
+            catch
+            {
+                DisplayMessage(WrongThreadMessage);
+                return null;
+            }
+
+            var debugger = Dte?.Debugger as Debugger5;
+            if (debugger?.CurrentStackFrame is null)
+            {
+                DisplayMessage($"CurrentStackFrame is not available. Is the debugger running?");
+                return null;
+            }
+
+            return debugger.CurrentStackFrame;
         }
 
         private enum EngineGenerator
