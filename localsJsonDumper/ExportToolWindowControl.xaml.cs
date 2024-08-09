@@ -106,6 +106,7 @@ namespace LocalsJsonDumper
             });
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "Done in GetCurrentStackFrame")]
         private void RenewLocalsFromDebugger()
         {
             var stackFrame = GetCurrentStackFrame();
@@ -167,6 +168,7 @@ namespace LocalsJsonDumper
             PopulateDropDown();
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "Done in GetCurrentStackFrame")]
         private void Generate()
         {
             var stackFrame = GetCurrentStackFrame();
