@@ -360,7 +360,7 @@ namespace LocalsJsonDumper
                 int millisecond = int.Parse(subExpressions.First(e => e.Name == nameof(DateTime.Millisecond)).Value);
 
                 var dt = new DateTime(year, month, day, hour, minute, second, millisecond);
-                return dt.ToString("yyyy-MM-ddTHH:mm:ss.fff");
+                return $"\"{dt.ToString("yyyy-MM-ddTHH:mm:ss.fff")}\"";
             }
             catch
             {
@@ -399,7 +399,7 @@ namespace LocalsJsonDumper
 
                 var offset = new TimeSpan(dayOffset, hourOffset, minuteOffset, secondOffset, millisecondOffset);
                 var dto = new DateTimeOffset(year, month, day, hour, minute, second, millisecond, offset);
-                return dto.ToString("yyyy-MM-ddTHH:mm:ss.fffzzz");
+                return $"\"{dto.ToString("yyyy-MM-ddTHH:mm:ss.fffzzz")}\"";
             }
             catch
             {
