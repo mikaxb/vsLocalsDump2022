@@ -49,7 +49,7 @@ namespace LocalsJsonDumper
                     returnBuilder.Append($"\"{Expression.Value}\"");
                     break;
                 case NodeType.Array:
-                    returnBuilder.Append($"[");
+                    returnBuilder.Append("[");
                     returnBuilder.Append(string.Join(",", Children.Select(c => $"{Environment.NewLine}{ValueHelper.GenerateIndentation(c.Depth)}{c.GenerateJson(cancellationToken)}").ToArray()));
                     returnBuilder.Append($"{Environment.NewLine}{ValueHelper.GenerateIndentation(Depth)}]");
                     break;
