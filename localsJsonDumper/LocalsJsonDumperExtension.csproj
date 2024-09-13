@@ -45,14 +45,18 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="DumpObjectCommandPackage.cs" />   
+    <Compile Include="Constants.cs" />
+    <Compile Include="DumpObjectCommandPackage.cs" />
     <Compile Include="ExportToolWindow.cs" />
     <Compile Include="ExportToolWindowCommand.cs" />
     <Compile Include="ExportToolWindowControl.xaml.cs">
       <DependentUpon>ExportToolWindowControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="ExpressionAnalyzer.cs" />
     <Compile Include="JsonGenerator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TreeNode.cs" />
+    <Compile Include="ValueHelper.cs" />
   </ItemGroup>
   <ItemGroup>
     <VSCTCompile Include="DumpObjectCommandPackage.vsct">
@@ -83,7 +87,7 @@
     </PackageReference>
     <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.7.2192" />
   </ItemGroup>
-  <ItemGroup>   
+  <ItemGroup>
     <Page Include="ExportToolWindowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

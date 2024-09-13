@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using EnvDTE100;
@@ -15,25 +13,21 @@ namespace LocalsJsonDumper
         {
 
         }
-
-        private const string _tokenCancelledMessage = "<Operation cancelled>";
-
+      
         private Regex PartOfCollection { get; } = new Regex(@"\[\d+\]");
 
-        private CancellationToken OperationCancellationToken { get; set; }
-
-        private uint MaxRecurseDepth { get; set; }
+        private uint MaxDepth { get; set; }
 
         private Regex IgnorePropNameRegex { get; set; }
 
         private Regex IgnorePropTypeRegex { get; set; }
 
-        public string GenerateJson(Expression2 expression, CancellationToken cancellationToken, uint maxDepth, Regex nameIgnoreRegex, Regex typeIgnoreRegex)
+        #region Breadth first generation
+        public string GenerateBreadthFirst(Expression2 expression, CancellationToken cancellationToken, uint maxDepth, Regex nameIgnoreRegex, Regex typeIgnoreRegex)
         {
             try
             {
-                OperationCancellationToken = cancellationToken;
-                MaxRecurseDepth = maxDepth;
+                MaxDepth = maxDepth;
                 IgnorePropNameRegex = null;
                 if (nameIgnoreRegex.ToString() != string.Empty)
                 {
@@ -44,8 +38,8 @@ namespace LocalsJsonDumper
                 {
                     IgnorePropTypeRegex = typeIgnoreRegex;
                 }
-                var result = GenerateJsonRecurse(expression, 0);
-                return result;
+                var result = BuildNodeTree(expression, cancellationToken);
+                return result.GenerateJson(cancellationToken);
             }
             catch (Exception ex)
             {
@@ -53,105 +47,104 @@ namespace LocalsJsonDumper
             }
         }
 
-        private bool ExpressionIsDictionary(Expression2 exp)
+        private TreeNode BuildNodeTree(Expression2 expression, CancellationToken cancellationToken)
         {
-            if (exp.Type.StartsWith("System.Collections.Generic.Dictionary"))
+            var root = new TreeNode
             {
-                return true;
-            }
-            if (exp.Type.StartsWith("System.Collections.Generic.IDictionary"))
+                Depth = 0,
+                Expression = expression,
+                Type = TreeNode.GetNodeTypeFromExpression(expression),
+                Name = expression.Name
+            };
+            var queue = new Queue<TreeNode>();
+            queue.Enqueue(root);
+            while (queue.Count > 0)
             {
-                return true;
-            }
-            if (exp.Type.StartsWith("System.Collections.Generic.SortedDictionary"))
-            {
-                return true;
-            }
-            if (exp.Type.StartsWith("System.Collections.Concurrent.ConcurrentDictionary"))
-            {
-                return true;
-            }
-            if (exp.Type.StartsWith("System.Collections.Generic.SortedList"))
-            {
-                return true;
-            }
-            if (exp.Type.StartsWith("System.Collections.SortedList"))
-            {
-                return true;
-            }
-            if (exp.Type.StartsWith("System.Collections.Immutable.ImmutableSortedDictionary"))
-            {
-                return true;
-            }
-            if (exp.Type.StartsWith("System.Collections.Immutable.ImmutableDictionary"))
-            {
-                return true;
-            }
-            return false;
-        }
+                if(cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+                var node = queue.Dequeue();
+                if (node.Depth >= MaxDepth)
+                {
+                    continue;
+                }
+                foreach (Expression2 expr in node.Expression.DataMembers)
+                {
 
-        private bool ExpressionIsCollectionOrArray(Expression2 exp)
+                    if (node.Type == NodeType.Value)
+                    {
+                        continue;
+                    }
+                    if ((node.Type == NodeType.Dictionary || node.Type == NodeType.Array) && !PartOfCollection.IsMatch(expr.Name) && node.Parent?.Type != NodeType.Dictionary)
+                    {
+                        continue;
+                    }
+                    //Omit record specific datamember
+                    if (expr.Name == "EqualityContract")
+                    {
+                        Debug.WriteLine("Omitting EqualityContract");
+                        continue;
+                    }
+                    //Omit user filtered properties
+                    if (IgnorePropNameRegex != null && IgnorePropNameRegex.IsMatch(expr.Name))
+                    {
+                        Debug.WriteLine($"Ignoring {expr.Name} due to name regex match: {IgnorePropNameRegex}");
+                        continue;
+                    }
+                    if (IgnorePropTypeRegex != null && IgnorePropTypeRegex.IsMatch(expr.Type))
+                    {
+                        Debug.WriteLine($"Ignoring {expr.Name} due to type regex match: {IgnorePropNameRegex}");
+                        continue;
+                    }
+                    
+
+                    var child = new TreeNode
+                    {
+                        //Dictionaries have a collection datamember that holds the key-value pair. We do not want that to affect the tree depth since it will not be part of the JSON.
+                        Depth = node.Type != NodeType.Dictionary ? node.Depth + 1 : node.Depth,
+                        Expression = expr,
+                        Type = TreeNode.GetNodeTypeFromExpression(expr),
+                        Parent = node,
+                        Name = expr.Name
+                    };
+                    queue.Enqueue(child);
+                    node.Children.Add(child);
+                }
+            }
+            return root;
+        }
+        #endregion
+
+        #region Recursive generation
+
+        [Obsolete("Use breadth first instead")]
+        public string GenerateRecursive(Expression2 expression, CancellationToken cancellationToken, uint maxDepth, Regex nameIgnoreRegex, Regex typeIgnoreRegex)
         {
-            if (exp.Type.StartsWith("System.Collections"))
+            try
             {
-                return true;
+                MaxDepth = maxDepth;
+                IgnorePropNameRegex = null;
+                if (nameIgnoreRegex.ToString() != string.Empty)
+                {
+                    IgnorePropNameRegex = nameIgnoreRegex;
+                }
+                IgnorePropTypeRegex = null;
+                if (typeIgnoreRegex.ToString() != string.Empty)
+                {
+                    IgnorePropTypeRegex = typeIgnoreRegex;
+                }
+                var result = GenerateJsonRecurse(expression, 0, cancellationToken);
+                return result;
             }
-            if (exp.Type.EndsWith("[]"))
+            catch (Exception ex)
             {
-                return true;
-            }
-            return false;
-        }
-
-        private bool ExpressionIsValue(Expression2 exp)
-        {
-            switch (exp.Type.Trim('?'))
-            {
-                case "string":
-                case "System.DateTime":
-                case "System.TimeSpan":
-                case "System.DateTimeOffset":
-                case "System.Guid":
-                case "int":
-                case "uint":
-                case "nint":
-                case "nuint":
-                case "char":
-                case "bool":
-                case "double":
-                case "float":
-                case "decimal":
-                case "long":
-                case "ulong":
-                case "byte":
-                case "sbyte":
-                case "short":
-                case "ushort":
-                    return true;
-
-                default:
-                    return false;
+                return $"<ERROR>{Environment.NewLine}Could not generate JSON due to {ex.GetType().Name}:{Environment.NewLine}{ex.Message}";
             }
         }
+       
 
-        private bool ExpressionIsEnum(Expression2 exp)
-        {
-            if (exp.DataMembers.Count > 0)
-            {
-                return false;
-            }
-            if (exp.Value.Contains("{"))
-            {
-                return false;
-            }
-            if (exp.Value.Contains("}"))
-            {
-                return false;
-            }
-            return true;
-        }
-
-        private string GenerateJsonRecurse(Expression2 currentExpression, uint currentDepth)
+        private string GenerateJsonRecurse(Expression2 currentExpression, uint currentDepth, CancellationToken cancellationToken)
         {
             if (currentExpression == null)
             {
@@ -160,41 +153,43 @@ namespace LocalsJsonDumper
 
             Debug.WriteLine($"Depth: {currentDepth}. {currentExpression.Name} {currentExpression.Type}:{currentExpression.Value}");
 
-            if (OperationCancellationToken.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
-                Debug.WriteLine(_tokenCancelledMessage);
-                return _tokenCancelledMessage;
+                Debug.WriteLine(Constants.TOKEN_CANCELLATION_MESSAGE);
+                return Constants.TOKEN_CANCELLATION_MESSAGE;
             }
 
             if (currentExpression.Value == "null")
             {
                 return "null";
             }
-            else if (ExpressionIsValue(currentExpression))
+            else if (ExpressionAnalyzer.ExpressionIsValue(currentExpression))
             {
-                return $"{GetJsonRepresentationOfValue(currentExpression)}";
+                return $"{ValueHelper.GetJsonRepresentationOfValue(currentExpression)}";
             }
-            else if (ExpressionIsEnum(currentExpression))
-            {
-                return $"\"{currentExpression.Value}\"";
-            }
-            else if (currentDepth >= MaxRecurseDepth)
+            else if (ExpressionAnalyzer.ExpressionIsEnum(currentExpression))
             {
                 return $"\"{currentExpression.Value}\"";
             }
-            else if (ExpressionIsDictionary(currentExpression))
+            else if (currentDepth >= MaxDepth)
+            {
+                return $"\"{currentExpression.Value}\"";
+            }
+            else if (ExpressionAnalyzer.ExpressionIsDictionary(currentExpression))
             {
                 var values = new List<string>();
                 string DictionaryReturn()
                 {
-                    return $"{{{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}}}";
+                    return $"{{{Environment.NewLine}{ValueHelper.GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{ValueHelper.GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{ValueHelper.GenerateIndentation(currentDepth)}}}";
                 }
+
+                // collections are dealt with in entirety
                 foreach (Expression2 dicSubExpression in currentExpression.DataMembers)
                 {
-                    if (OperationCancellationToken.IsCancellationRequested)
+                    if (cancellationToken.IsCancellationRequested)
                     {
-                        Debug.WriteLine(_tokenCancelledMessage);
-                        values.Add(_tokenCancelledMessage);
+                        Debug.WriteLine(Constants.TOKEN_CANCELLATION_MESSAGE);
+                        values.Add(Constants.TOKEN_CANCELLATION_MESSAGE);
                         return DictionaryReturn();
                     }
 
@@ -210,7 +205,7 @@ namespace LocalsJsonDumper
                             }
                             if (dicCollectionExpression.Name == "Value")
                             {
-                                value = GenerateJsonRecurse(dicCollectionExpression, currentDepth + 1);
+                                value = GenerateJsonRecurse(dicCollectionExpression, currentDepth + 1, cancellationToken);
                             }
                         }
 
@@ -222,24 +217,26 @@ namespace LocalsJsonDumper
                 }
                 return DictionaryReturn();
             }
-            else if (ExpressionIsCollectionOrArray(currentExpression))
+            else if (ExpressionAnalyzer.ExpressionIsCollectionOrArray(currentExpression))
             {
                 var values = new List<string>();
                 string ListReturn()
                 {
-                    return $"[{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}]";
+                    return $"[{Environment.NewLine}{ValueHelper.GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{ValueHelper.GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{ValueHelper.GenerateIndentation(currentDepth)}]";
                 }
+
+                // collections are dealt with in entirety
                 foreach (Expression2 ex in currentExpression.DataMembers)
                 {
-                    if (OperationCancellationToken.IsCancellationRequested)
+                    if (cancellationToken.IsCancellationRequested)
                     {
-                        Debug.WriteLine(_tokenCancelledMessage);
-                        values.Add(_tokenCancelledMessage);
+                        Debug.WriteLine(Constants.TOKEN_CANCELLATION_MESSAGE);
+                        values.Add(Constants.TOKEN_CANCELLATION_MESSAGE);
                         return ListReturn();
                     }
                     if (PartOfCollection.IsMatch(ex.Name))
                     {
-                        values.Add(GenerateJsonRecurse(ex, currentDepth + 1));
+                        values.Add(GenerateJsonRecurse(ex, currentDepth + 1, cancellationToken));
                     }
                 }
                 return ListReturn();
@@ -249,14 +246,14 @@ namespace LocalsJsonDumper
                 var values = new List<string>();
                 string ObjectReturn()
                 {
-                    return $"{{{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{GenerateIndentation(currentDepth)}}}";
+                    return $"{{{Environment.NewLine}{ValueHelper.GenerateIndentation(currentDepth + 1)}{string.Join($",{Environment.NewLine}{ValueHelper.GenerateIndentation(currentDepth + 1)}", values.ToArray())}{Environment.NewLine}{ValueHelper.GenerateIndentation(currentDepth)}}}";
                 }
                 foreach (Expression2 subExpression in currentExpression.DataMembers)
                 {
-                    if (OperationCancellationToken.IsCancellationRequested)
+                    if (cancellationToken.IsCancellationRequested)
                     {
-                        Debug.WriteLine(_tokenCancelledMessage);
-                        values.Add(_tokenCancelledMessage);
+                        Debug.WriteLine(Constants.TOKEN_CANCELLATION_MESSAGE);
+                        values.Add(Constants.TOKEN_CANCELLATION_MESSAGE);
                         return ObjectReturn();
                     }
                     //Omit this. It is automatically part of record-objects.
@@ -282,129 +279,13 @@ namespace LocalsJsonDumper
                     }
                     else
                     {
-                        values.Add($"\"{subExpression.Name}\": {GenerateJsonRecurse(subExpression, currentDepth + 1)}");
+                        values.Add($"\"{subExpression.Name}\": {GenerateJsonRecurse(subExpression, currentDepth + 1, cancellationToken)}");
                     }
                 }
                 return ObjectReturn();
             }
         }
-
-        private string GenerateIndentation(uint depth)
-        {
-            if (depth == uint.MaxValue)
-            {
-                depth = uint.MinValue;
-            }
-
-            var indentation = new StringBuilder();
-
-            for (int i = 0; i < depth; i++)
-            {
-                indentation.Append("  ");
-            }
-
-            return indentation.ToString();
-        }
-
-        private string GetJsonRepresentationOfValue(Expression2 exp)
-        {
-            switch (exp.Type.Trim('?'))
-            {
-                case "System.DateTime":
-                    return HandleDatetime(exp);
-                case "System.DateTimeOffset":
-                    return HandleDatetimeOffset(exp);
-                case "System.Guid":
-                case "System.TimeSpan":
-                    return $"\"{exp.Value.Replace("{", "").Replace("}", "")}\"";
-                case "string":
-                case "int":
-                case "uint":
-                case "nint":
-                case "nuint":
-                case "bool":
-                case "double":
-                case "float":
-                case "decimal":
-                case "long":
-                case "ulong":
-                case "byte":
-                case "sbyte":
-                case "short":
-                case "ushort":
-                    return exp.Value;
-                case "char":
-                    return $"\"{exp.Value.Substring(exp.Value.IndexOf("'") + 1, 1)}\"";
-
-                default:
-                    return $" <UNHANDLED TYPE: {exp.Type}>";
-            }
-        }
-
-        private string HandleDatetime(Expression2 exp)
-        {
-            try
-            {
-                var subExpressions = new List<Expression2>();
-                foreach (Expression2 subExpression in exp.DataMembers)
-                {
-                    subExpressions.Add(subExpression);
-                }
-
-                int year = int.Parse(subExpressions.First(e => e.Name == nameof(DateTime.Year)).Value);
-                int month = int.Parse(subExpressions.First(e => e.Name == nameof(DateTime.Month)).Value);
-                int day = int.Parse(subExpressions.First(e => e.Name == nameof(DateTime.Day)).Value);
-                int hour = int.Parse(subExpressions.First(e => e.Name == nameof(DateTime.Hour)).Value);
-                int minute = int.Parse(subExpressions.First(e => e.Name == nameof(DateTime.Minute)).Value);
-                int second = int.Parse(subExpressions.First(e => e.Name == nameof(DateTime.Second)).Value);
-                int millisecond = int.Parse(subExpressions.First(e => e.Name == nameof(DateTime.Millisecond)).Value);
-
-                var dt = new DateTime(year, month, day, hour, minute, second, millisecond);
-                return $"\"{dt.ToString("yyyy-MM-ddTHH:mm:ss.fff")}\"";
-            }
-            catch
-            {
-                return $"\"{exp.Value.Replace("{", "").Replace("}", "")}\"";
-            }
-        }
-
-        private string HandleDatetimeOffset(Expression2 exp)
-        {
-            try
-            {
-                var subExpressions = new List<Expression2>();
-                foreach (Expression2 expression in exp.DataMembers)
-                {
-                    subExpressions.Add(expression);
-                }
-
-                int year = int.Parse(subExpressions.First(e => e.Name == nameof(DateTimeOffset.Year)).Value);
-                int month = int.Parse(subExpressions.First(e => e.Name == nameof(DateTimeOffset.Month)).Value);
-                int day = int.Parse(subExpressions.First(e => e.Name == nameof(DateTimeOffset.Day)).Value);
-                int hour = int.Parse(subExpressions.First(e => e.Name == nameof(DateTimeOffset.Hour)).Value);
-                int minute = int.Parse(subExpressions.First(e => e.Name == nameof(DateTimeOffset.Minute)).Value);
-                int second = int.Parse(subExpressions.First(e => e.Name == nameof(DateTimeOffset.Second)).Value);
-                int millisecond = int.Parse(subExpressions.First(e => e.Name == nameof(DateTimeOffset.Millisecond)).Value);
-
-                var offsetExpressions = new List<Expression2>();
-                foreach (Expression2 expression in subExpressions.First(e => e.Name == nameof(DateTimeOffset.Offset)).DataMembers)
-                {
-                    offsetExpressions.Add(expression);
-                }
-                int dayOffset = int.Parse(offsetExpressions.First(e => e.Name == nameof(TimeSpan.Days)).Value);
-                int hourOffset = int.Parse(offsetExpressions.First(e => e.Name == nameof(TimeSpan.Hours)).Value);
-                int minuteOffset = int.Parse(offsetExpressions.First(e => e.Name == nameof(TimeSpan.Minutes)).Value);
-                int secondOffset = int.Parse(offsetExpressions.First(e => e.Name == nameof(TimeSpan.Seconds)).Value);
-                int millisecondOffset = int.Parse(offsetExpressions.First(e => e.Name == nameof(TimeSpan.Milliseconds)).Value);
-
-                var offset = new TimeSpan(dayOffset, hourOffset, minuteOffset, secondOffset, millisecondOffset);
-                var dto = new DateTimeOffset(year, month, day, hour, minute, second, millisecond, offset);
-                return $"\"{dto.ToString("yyyy-MM-ddTHH:mm:ss.fffzzz")}\"";
-            }
-            catch
-            {
-                return $"\"{exp.Value.Replace("{", "").Replace("}", "")}\"";
-            }
-        }
+        #endregion
     }
+    
 }

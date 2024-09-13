@@ -306,7 +306,7 @@ namespace LocalsJsonDumper
                 {
                     Debug.WriteLine("Generation starting");
                     var generator = new JsonGenerator();
-                    result = generator.GenerateJson(expression, cancellationToken, maxDepth, nameIgnoreRegex, typeIgnoreRegex);
+                    result = generator.GenerateBreadthFirst(expression, cancellationToken, maxDepth, nameIgnoreRegex, typeIgnoreRegex);
                 }
                 catch (Exception ex)
                 {
