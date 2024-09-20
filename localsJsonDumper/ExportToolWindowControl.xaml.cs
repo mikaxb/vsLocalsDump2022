@@ -49,8 +49,8 @@ namespace LocalsJsonDumper
         private bool UseSystemTextJson => (EngineChoiceBox.SelectedItem as EngineListItem)?.Generator == EngineGenerator.SystemTextJson;
 
         private List<EngineListItem> Engines { get; } = new List<EngineListItem>() {
-            new EngineListItem() { Generator = EngineGenerator.SystemTextJson, Text = "GetExpression with C# System.Text.Json" },
-            new EngineListItem() { Generator = EngineGenerator.TreeClimber, Text = "Traverse debugger expression tree" }
+            new EngineListItem() { Generator = EngineGenerator.SystemTextJson, Text =   "GetExpression with C# System.Text.Json" },
+            new EngineListItem() { Generator = EngineGenerator.TreeClimber, Text =      "Breadth-first debugger tree traversal" }
         };
 
         public void SetDTE(DTE2 dte)
@@ -306,7 +306,7 @@ namespace LocalsJsonDumper
                 {
                     Debug.WriteLine("Generation starting");
                     var generator = new JsonGenerator();
-                    result = generator.GenerateJson(expression, cancellationToken, maxDepth, nameIgnoreRegex, typeIgnoreRegex);
+                    result = generator.GenerateBreadthFirst(expression, cancellationToken, maxDepth, nameIgnoreRegex, typeIgnoreRegex);
                 }
                 catch (Exception ex)
                 {
