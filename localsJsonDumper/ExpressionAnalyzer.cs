@@ -1,44 +1,27 @@
 ﻿using EnvDTE100;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace LocalsJsonDumper
 {
     internal static class ExpressionAnalyzer
     {
+        private static readonly IEnumerable<string> _dictionaryTypeStarts = new List<string>
+        {
+            "System.Collections.Generic.Dictionary",
+            "System.Collections.Generic.IDictionary",
+            "System.Collections.Generic.SortedDictionary",
+            "System.Collections.Concurrent.ConcurrentDictionary",
+            "System.Collections.Generic.SortedList",
+            "System.Collections.SortedList",
+            "System.Collections.Immutable.ImmutableSortedDictionary",
+            "System.Collections.Immutable.ImmutableDictionary"
+        };
+
         public static bool ExpressionIsDictionary(Expression2 exp)
         {
-            if (exp.Type.StartsWith("System.Collections.Generic.Dictionary"))
-            {
-                return true;
-            }
-            if (exp.Type.StartsWith("System.Collections.Generic.IDictionary"))
-            {
-                return true;
-            }
-            if (exp.Type.StartsWith("System.Collections.Generic.SortedDictionary"))
-            {
-                return true;
-            }
-            if (exp.Type.StartsWith("System.Collections.Concurrent.ConcurrentDictionary"))
-            {
-                return true;
-            }
-            if (exp.Type.StartsWith("System.Collections.Generic.SortedList"))
-            {
-                return true;
-            }
-            if (exp.Type.StartsWith("System.Collections.SortedList"))
-            {
-                return true;
-            }
-            if (exp.Type.StartsWith("System.Collections.Immutable.ImmutableSortedDictionary"))
-            {
-                return true;
-            }
-            if (exp.Type.StartsWith("System.Collections.Immutable.ImmutableDictionary"))
-            {
-                return true;
-            }
-            return false;
+            return _dictionaryTypeStarts.Any(start => exp.Type.StartsWith(start));
         }
 
         public static bool ExpressionIsCollectionOrArray(Expression2 exp)
