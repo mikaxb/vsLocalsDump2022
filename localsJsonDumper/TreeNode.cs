@@ -74,6 +74,8 @@ namespace LocalsJsonDumper
 
         public static NodeType GetNodeTypeFromExpression(Expression2 expression)
         {
+            // Order of checking is important due to how the checking works for dictionaries and collections.
+            // The check for dictionary type must be done before the check for generic collection since dictionary types are specialized collections.
             if (expression.Value == "null")
             {
                 return NodeType.Null;
